@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f4e79">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ACR">
+<meta name="description" content="Offline utility for preparing the Himachal Pradesh / UGC PBAS Annual Performance Based Appraisal (ACR), Parts I and II.">
+<!-- Google Cloud Console OAuth 2.0 Client ID for this deployment. Left empty in source —
+     fill in the real value here before deploying the hosted (GitHub Pages) build. See
+     docs/superpowers/specs/2026-08-16-google-account-sync-design.md §19. -->
+<meta name="google-client-id" content="">
+<title>ACR Utility — Annual Performance Based Appraisal (PBAS)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%231f4e79'/><text x='32' y='44' font-size='30' font-family='Georgia,serif' fill='white' text-anchor='middle'>A</text></svg>">
+<style>/*{{CSS}}*/</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">ACR Utility<small>PBAS · UGC Regulations 2010</small></div>
+  <select class="session" id="sessionSel" title="Switch year"></select>
+  <span class="status" id="saveStatus">Ready</span>
+  <button class="btn ghost status" id="syncStatus" style="display:none"></button>
+  <button class="btn ghost sm status" id="authArea"></button>
+  <span class="grow"></span>
+  <button class="btn" id="btnSave" title="Save now (Ctrl+S)">Save</button>
+  <button class="btn" id="btnPreview">Preview</button>
+  <button class="btn" id="btnDocx">Word (.docx)</button>
+  <button class="btn primary" id="btnPdf">PDF</button>
+</header>
+
+<div class="wrap">
+  <nav class="side" id="nav"></nav>
+  <div class="mobnav"><select id="mobsel" aria-label="Go to section"></select></div>
+  <main id="main"></main>
+</div>
+
+<div class="fabbar">
+  <button class="btn" id="btnPreview2">Preview</button>
+  <button class="btn" id="btnDocx2">Word</button>
+  <button class="btn primary" id="btnPdf2">PDF</button>
+</div>
+
+<div id="previewOverlay">
+  <div class="pvbar">
+    <button class="btn" id="btnClosePv">← Back to form</button>
+    <span class="grow" style="flex:1"></span>
+    <span class="status">Print · choose A4, margins “Default”, turn off browser headers &amp; footers</span>
+    <button class="btn" id="btnDocx2b" onclick="downloadDocx()">Word (.docx)</button>
+    <button class="btn primary" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <div class="pvbody" id="pvContent"></div>
+</div>
+
+<div id="toast"></div>
+
+<footer class="appfooter">Utility developed by: Dr. Prince Thakur (Assistant Professor Botany)</footer>
+
+<script>
+/*{{JS}}*/
+</script>
+</body>
+</html>

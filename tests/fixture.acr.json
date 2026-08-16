@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 4,
+  "employee": {"name":"Test Faculty","employeeCode":"EMP-01"},
+  "part1": {"session":"2026-27"},
+  "api": {"categoryOne":{},"categoryTwo":{},"categoryThree":[]}
+}

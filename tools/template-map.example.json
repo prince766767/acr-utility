@@ -1,0 +1,14 @@
+{
+  "notes": "Coordinates are in points from the bottom-left of A4. This is an example only. Calibrate every employee field against the retained official 30-page PDF, then record the visual QA result.",
+  "pages": {
+    "0": [
+      {"path":"employee.name","x":360,"y":690,"size":9,"maxChars":70},
+      {"path":"employee.employeeCode","x":360,"y":670,"size":9,"maxChars":30},
+      {"path":"part1.session","x":360,"y":650,"size":9,"maxChars":20}
+    ],
+    "1": [
+      {"path":"part1.fatherSpouse","x":330,"y":690,"size":9,"maxChars":80},
+      {"path":"part1.appointmentDate","x":330,"y":670,"size":9,"maxChars":20}
+    ]
+  }
+}
