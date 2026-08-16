@@ -56,6 +56,25 @@ function mergeDocsWithConflicts(localDocs, remoteDocs) {
   return { docs, conflicts, report };
 }
 
+/* ---------- error classification for the sync status chip ----------
+   A request that reached Google and got back a real HTTP response (.status set, either
+   by driveApiFetch's Drive API calls or by auth.js's own token-endpoint calls) proves the
+   device is online — whatever went wrong is a real API/auth problem, not connectivity, and
+   must never be shown to the teacher as "Offline". Only an error with no .status at all
+   (fetch failed before any response came back — DNS/network/CORS-level) is a genuine
+   connectivity failure. This was the root cause of "Offline" showing right after a
+   successful, fully-online sign-in: every non-connectivity error used to be mislabelled
+   the same way. */
+function classifySyncError(e) {
+  if (e && e.needsSignIn) return { status: 'attention', toastMessage: null };
+  const reachedServer = typeof (e && e.status) === 'number';
+  if (!reachedServer) return { status: 'offline', toastMessage: null };
+  return {
+    status: 'attention',
+    toastMessage: 'Sync could not complete (' + (e && e.message ? e.message : 'unknown Drive error') + '). Your work is still saved on this device.'
+  };
+}
+
 /* ---------- account-switch wiring (browser only — see the guard at the bottom of this file) ---------- */
 function drivesyncOnAuthChange(auth) {
   if (auth.state === 'signed-in' && auth.account) {
@@ -166,7 +185,9 @@ async function drivesyncRun() {
     DRIVESYNC.status = 'idle'; DRIVESYNC.lastError = null;
   } catch (e) {
     DRIVESYNC.lastError = e;
-    DRIVESYNC.status = e && e.needsSignIn ? 'attention' : 'offline';
+    const cls = classifySyncError(e);
+    DRIVESYNC.status = cls.status;
+    if (cls.toastMessage) toast(cls.toastMessage, 7000);
   } finally {
     DRIVESYNC.busy = false; drivesyncPaint();
   }
@@ -192,5 +213,5 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof o
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { mergeDocsWithConflicts };
+  module.exports = { mergeDocsWithConflicts, classifySyncError };
 }

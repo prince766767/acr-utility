@@ -36,8 +36,22 @@ function makeFetchStub(responses) {
 
   global.fetch = makeFetchStub([{ ok: false, status: 401, body: {} }]);
   let threw = false;
-  try { await drive.driveListYearFiles('tok', 'root123'); } catch (e) { threw = true; assert.equal(e.status, 401); }
+  try { await drive.driveListYearFiles('tok', 'root123'); } catch (e) {
+    threw = true;
+    assert.equal(e.status, 401);
+    assert.equal(e.needsSignIn, true, 'a 401 must be flagged needsSignIn — an expired/invalid token is fixed by signing in again, not by waiting for connectivity');
+  }
   assert.ok(threw, 'a non-2xx Drive response must throw with .status set');
+
+  // A real Drive error body (e.g. insufficient scope) must have its message surfaced, not swallowed —
+  // this is what makes a genuine API problem distinguishable from "no connectivity" (root cause of the
+  // live "Offline right after sign-in" bug).
+  global.fetch = makeFetchStub([{ ok: false, status: 403, body: { error: { message: 'The user does not have sufficient permissions for this file.' } } }]);
+  try { await drive.driveListYearFiles('tok', 'root123'); assert.fail('expected a throw'); } catch (e) {
+    assert.equal(e.status, 403);
+    assert.ok(!e.needsSignIn, 'a 403 is not necessarily fixed by re-signing in, so must not be flagged needsSignIn');
+    assert.ok(e.message.includes('sufficient permissions'), 'Drive\'s own error message must be included, not discarded');
+  }
 
   global.fetch = makeFetchStub([{ body: { id: 'bk1' } }]);
   const bkId = await drive.driveWriteBackupSnapshot('tok', 'backups456', [{ id: 'doc1', session: '2025-26' }]);

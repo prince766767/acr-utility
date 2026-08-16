@@ -14,8 +14,15 @@ async function driveApiFetch(token, url, opts) {
     headers: Object.assign({ Authorization: 'Bearer ' + token }, (opts && opts.headers) || {})
   }));
   if (!r.ok) {
-    const err = new Error('Drive request failed (' + r.status + ')');
-    err.status = r.status;
+    /* Capture Google's own error message so a real API failure (wrong scope, Drive API
+       not enabled, malformed request, etc.) is distinguishable from "no network reached
+       Google at all" — never includes the token or any ACR content, only Drive's own
+       short error description. */
+    let reason = '';
+    try { const body = await r.json(); reason = (body && body.error && body.error.message) || ''; } catch (e) {}
+    const err = new Error('Drive request failed (' + r.status + ')' + (reason ? ': ' + reason : ''));
+    err.status = r.status;                 // presence of .status proves a real HTTP response came back — i.e. we are not offline
+    if (r.status === 401) err.needsSignIn = true; // token invalid/expired — re-signing in resolves this specifically
     throw err;
   }
   return r.json();
