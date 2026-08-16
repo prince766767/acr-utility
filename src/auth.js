@@ -14,7 +14,16 @@ let AUTH_TOKEN_CLIENT = null;
 let AUTH_GIS_PROMISE = null;
 
 function onAuthChange(fn) { AUTH_LISTENERS.push(fn); }
-function authFireChange() { AUTH_LISTENERS.forEach((fn) => { try { fn(AUTH); } catch (e) {} }); }
+/* Each listener runs in its own try/catch so one broken listener can't stop the others —
+   but the failure must never be silently discarded, or whatever's wrong becomes invisible
+   to everyone, including the person debugging it. Never logs the token or account details,
+   only the error itself. */
+function authFireChange() {
+  AUTH_LISTENERS.forEach((fn) => {
+    try { fn(AUTH); }
+    catch (e) { console.error('[ACR Utility] a sign-in listener failed:', e); }
+  });
+}
 
 function authClientId() {
   const m = document.querySelector('meta[name="google-client-id"]');

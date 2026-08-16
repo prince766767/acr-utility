@@ -2020,7 +2020,16 @@ let AUTH_TOKEN_CLIENT = null;
 let AUTH_GIS_PROMISE = null;
 
 function onAuthChange(fn) { AUTH_LISTENERS.push(fn); }
-function authFireChange() { AUTH_LISTENERS.forEach((fn) => { try { fn(AUTH); } catch (e) {} }); }
+/* Each listener runs in its own try/catch so one broken listener can't stop the others —
+   but the failure must never be silently discarded, or whatever's wrong becomes invisible
+   to everyone, including the person debugging it. Never logs the token or account details,
+   only the error itself. */
+function authFireChange() {
+  AUTH_LISTENERS.forEach((fn) => {
+    try { fn(AUTH); }
+    catch (e) { console.error('[ACR Utility] a sign-in listener failed:', e); }
+  });
+}
 
 function authClientId() {
   const m = document.querySelector('meta[name="google-client-id"]');
@@ -2335,10 +2344,11 @@ function classifySyncError(e) {
 
 /* ---------- account-switch wiring (browser only — see the guard at the bottom of this file) ---------- */
 function drivesyncOnAuthChange(auth) {
+  console.log('[ACR-sync] auth changed:', auth.state);
   if (auth.state === 'signed-in' && auth.account) {
     const wasNs = ACTIVE_NS;
     const targetNs = driveNamespaceFor(auth.account);
-    if (wasNs === targetNs) return; // already on this account's workspace — nothing to do
+    if (wasNs === targetNs) { console.log('[ACR-sync] already on this account\'s workspace, nothing to do'); return; }
     // Read local (pre-sign-in or previous-account) data BEFORE switching namespace.
     ACTIVE_NS = '';
     const migrateLocal = wasNs === '' && offerMigrationIfNeeded(auth.account);
@@ -2349,6 +2359,7 @@ function drivesyncOnAuthChange(auth) {
       toast(toCopy.length + ' year(s) added to your Google account.');
     }
     reloadWorkspace();
+    console.log('[ACR-sync] starting first sync after sign-in');
     drivesyncRun();
   } else if (auth.state === 'signed-out') {
     ACTIVE_NS = '';
@@ -2390,15 +2401,20 @@ function drivesyncGetMeta(id) { try { return JSON.parse(lsGet(drivesyncMetaKey(i
 function drivesyncSetMeta(id, meta) { lsSet(drivesyncMetaKey(id), JSON.stringify(meta)); }
 
 async function drivesyncRun() {
-  if (DRIVESYNC.busy || AUTH.state !== 'signed-in') return;
-  if (!navigator.onLine) { DRIVESYNC.status = 'offline'; drivesyncPaint(); return; }
+  if (DRIVESYNC.busy) { console.log('[ACR-sync] skipped: a sync is already in progress'); return; }
+  if (AUTH.state !== 'signed-in') { console.log('[ACR-sync] skipped: not signed in (state=' + AUTH.state + ')'); return; }
+  if (!navigator.onLine) { console.log('[ACR-sync] skipped: navigator.onLine is false'); DRIVESYNC.status = 'offline'; drivesyncPaint(); return; }
+  console.log('[ACR-sync] run: starting');
   DRIVESYNC.busy = true; DRIVESYNC.status = 'syncing'; drivesyncPaint();
   try {
     const token = await authGetToken();
+    console.log('[ACR-sync] run: access token acquired');
     const { rootId, backupsId } = await drivesyncEnsureWorkspace(token);
+    console.log('[ACR-sync] run: workspace ready, folder id present:', !!rootId, 'backups id present:', !!backupsId);
     DRIVESYNC.workspace = { rootId, backupsId };
 
     const remoteFiles = await driveListYearFiles(token, rootId);
+    console.log('[ACR-sync] run: year-files currently in Drive:', remoteFiles.length);
     const localDocs = loadIndex().map((r) => loadDocById(r.id)).filter(Boolean);
 
     // Only fetch full content for files whose modifiedTime moved since our last known sync for that id.
@@ -2433,6 +2449,7 @@ async function drivesyncRun() {
       const upToDate = remote && meta && meta.driveModifiedTime === remote.modifiedTime && meta.lastSyncedRev === d.rev;
       if (upToDate) continue;
       const fileId = await driveUpsertYearFile(token, rootId, d, remote ? remote.id : null);
+      console.log('[ACR-sync] run: wrote year file to Drive, id present:', !!fileId);
       drivesyncSetMeta(d.id, { driveFileId: fileId, driveModifiedTime: new Date().toISOString(), lastSyncedRev: d.rev });
     }
 
@@ -2440,8 +2457,10 @@ async function drivesyncRun() {
       reloadWorkspace();
     }
 
+    console.log('[ACR-sync] run: completed successfully');
     DRIVESYNC.status = 'idle'; DRIVESYNC.lastError = null;
   } catch (e) {
+    console.error('[ACR-sync] run: failed —', e && e.status ? 'HTTP ' + e.status + ': ' : '', e && e.message);
     DRIVESYNC.lastError = e;
     const cls = classifySyncError(e);
     DRIVESYNC.status = cls.status;
