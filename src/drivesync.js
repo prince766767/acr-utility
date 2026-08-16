@@ -141,7 +141,7 @@ async function drivesyncRun() {
   DRIVESYNC.busy = true; DRIVESYNC.status = 'syncing'; drivesyncPaint();
   try {
     const token = await authGetToken();
-    console.log('[ACR-sync] run: access token acquired');
+    console.log('[ACR-sync] run: access token acquired, requesting ACR Utility folder (first Drive API call)…');
     const { rootId, backupsId } = await drivesyncEnsureWorkspace(token);
     console.log('[ACR-sync] run: workspace ready, folder id present:', !!rootId, 'backups id present:', !!backupsId);
     DRIVESYNC.workspace = { rootId, backupsId };

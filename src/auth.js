@@ -55,13 +55,14 @@ function authEnsureTokenClient() {
 }
 
 function authRequestToken(promptMode) {
+  console.log('[ACR-sync] requesting access token (prompt="' + promptMode + '")');
   return authLoadGis().then(() => new Promise((resolve, reject) => {
     const client = authEnsureTokenClient();
     client.callback = (resp) => {
-      if (resp && resp.access_token) resolve(resp);
-      else reject(Object.assign(new Error('Sign-in was not completed.'), { needsSignIn: true }));
+      if (resp && resp.access_token) { console.log('[ACR-sync] token callback received: success'); resolve(resp); }
+      else { console.log('[ACR-sync] token callback received: no access_token in response'); reject(Object.assign(new Error('Sign-in was not completed.'), { needsSignIn: true })); }
     };
-    client.error_callback = (err) => reject(Object.assign(new Error((err && err.message) || 'Sign-in failed.'), { needsSignIn: true }));
+    client.error_callback = (err) => { console.log('[ACR-sync] token error_callback received'); reject(Object.assign(new Error((err && err.message) || 'Sign-in failed.'), { needsSignIn: true })); };
     client.requestAccessToken({ prompt: promptMode });
   }));
 }
@@ -101,19 +102,34 @@ async function authSignOut() {
   }
 }
 
+/* authGetToken() can legitimately be called concurrently — e.g. authBoot()'s own background
+   refresh and drivesyncRun()'s call both fire from the same sign-in event. Google's token
+   client is one shared object (authEnsureTokenClient()): calling requestAccessToken() a
+   second time before the first has responded overwrites client.callback/error_callback,
+   silently orphaning the first caller's promise forever (root cause of a real bug — sync
+   would hang indefinitely, never erroring, never completing). Every concurrent caller must
+   therefore share the one real in-flight request instead of each starting a new one. */
+let AUTH_TOKEN_INFLIGHT = null;
+
 async function authGetToken() {
   if (AUTH.token && Date.now() < AUTH.tokenExpiry - 30000) return AUTH.token;
-  try {
-    const resp = await authRequestToken('');
-    AUTH.token = resp.access_token;
-    AUTH.tokenExpiry = Date.now() + (Number(resp.expires_in) || 3300) * 1000;
-    if (!AUTH.account) AUTH.account = await authFetchUserinfo(AUTH.token);
-    AUTH.state = 'signed-in'; authFireChange();
-    return AUTH.token;
-  } catch (e) {
-    AUTH.state = 'error'; authFireChange();
-    throw Object.assign(e, { needsSignIn: true });
-  }
+  if (AUTH_TOKEN_INFLIGHT) { console.log('[ACR-sync] token request already in flight, joining it instead of starting another'); return AUTH_TOKEN_INFLIGHT; }
+  AUTH_TOKEN_INFLIGHT = (async () => {
+    try {
+      const resp = await authRequestToken('');
+      AUTH.token = resp.access_token;
+      AUTH.tokenExpiry = Date.now() + (Number(resp.expires_in) || 3300) * 1000;
+      if (!AUTH.account) AUTH.account = await authFetchUserinfo(AUTH.token);
+      AUTH.state = 'signed-in'; authFireChange();
+      return AUTH.token;
+    } catch (e) {
+      AUTH.state = 'error'; authFireChange();
+      throw Object.assign(e, { needsSignIn: true });
+    } finally {
+      AUTH_TOKEN_INFLIGHT = null;
+    }
+  })();
+  return AUTH_TOKEN_INFLIGHT;
 }
 
 function authBoot() {
