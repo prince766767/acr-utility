@@ -53,7 +53,7 @@ class TemplateIsBlank(unittest.TestCase):
 
     def test_no_auto_numbering_in_entry_rows(self):
         from docx.oxml.ns import qn
-        for ti in range(7, 23):
+        for ti in (0, 1, 2, 3, 4, 5, 6, 24) + tuple(range(7, 23)):
             for tr in self.doc.tables[ti]._tbl.tr_lst[1:]:
                 self.assertEqual(tr.findall('.//' + qn('w:numPr')), [], f'table {ti}')
 
@@ -101,8 +101,6 @@ class TemplateTokens(unittest.TestCase):
         expected = {t: 1 for t in TOKENS}
         expected['FULL_NAME'] = 2
         expected['SESSION'] = 2
-        for tok in ('P17', 'P18', 'P19B'):  # text boxes: the displayed copy and the fallback copy
-            expected[tok] = 2
         self.assertEqual(found, expected)
 
     def test_title_and_relation_options_unstruck_and_separate(self):
@@ -124,6 +122,29 @@ class TemplateTokens(unittest.TestCase):
         self.assertNotIn('Exempted vide Director', full)
         self.assertNotIn('{{OTHER_INFO}}', full)
         self.assertEqual(self.doc.tables[1].rows[-1].cells[0].text.strip(), 'Total periods per week')
+        self.assertTrue(all(r.bold for r in self.doc.tables[1].rows[-1].cells[0].paragraphs[0].runs if r.text))
+
+    def test_answer_boxes_are_bordered_paragraphs(self):
+        # 17, 18 and 19(b): bordered body paragraphs (they grow and split across pages), not text boxes or tables
+        qn = self.qn
+        for tok in ('{{P17}}', '{{P18}}', '{{P19B}}'):
+            ts = [t for t in self.doc.element.body.iter(qn('w:t')) if t.text == tok]
+            self.assertEqual(len(ts), 1, tok)
+            p = next(ts[0].iterancestors(qn('w:p')))
+            self.assertIs(p.getparent(), self.doc.element.body, tok)
+            self.assertIsNotNone(p.find(qn('w:pPr') + '/' + qn('w:pBdr')), tok)
+        compat = self.doc.settings.element.find(qn('w:compat'))
+        self.assertIsNotNone(compat.find(qn('w:doNotExpandShiftReturn')))
+
+    def test_point_20_rows_line_up_with_header(self):
+        qn = self.qn
+        def spans(tr):
+            return [int(tc.tcPr.find(qn('w:gridSpan')).get(qn('w:val'))) if tc.tcPr is not None and tc.tcPr.find(qn('w:gridSpan')) is not None else 1
+                    for tc in tr.tc_lst]
+        trs = self.doc.tables[4]._tbl.tr_lst
+        for tr in trs[3:]:
+            self.assertEqual(spans(tr), spans(trs[2]))
+
 
 if __name__ == '__main__':
     unittest.main()
