@@ -136,6 +136,38 @@ class TemplateTokens(unittest.TestCase):
         compat = self.doc.settings.element.find(qn('w:compat'))
         self.assertIsNotNone(compat.find(qn('w:doNotExpandShiftReturn')))
 
+    def test_part2_leftovers_fixed(self):
+        qn = self.qn
+        body = self.doc.element.body
+        first = {1: 1, 2: 1, 3: 1, 4: 3, 5: 1, 6: 1, 24: 1}
+        for ti, start in first.items():
+            for tr in self.doc.tables[ti]._tbl.tr_lst[start:]:
+                self.assertEqual([tc for tc in tr.tc_lst if tc.tcPr is not None and tc.tcPr.find(qn('w:vMerge')) is not None], [], f'table {ti}')
+        texts = [''.join(t.text or '' for t in p.iter(qn('w:t'))) for p in body.iterchildren(qn('w:p'))]
+        self.assertTrue(any(t.startswith('(f)Which new books relating to your subject') for t in texts))
+        self.assertTrue(any(t.startswith('(g)What are the vital problems of teaching') for t in texts))
+        paras = list(body.iterchildren(qn('w:p')))
+        i = next(i for i, p in enumerate(paras) if '{{P19F}}' in ''.join(t.text or '' for t in p.iter(qn('w:t'))))
+        j = next(i for i, p in enumerate(paras) if ''.join(t.text or '' for t in p.iter(qn('w:t'))).startswith('Details of Last year'))
+        for p in paras[i:j]:
+            t = ''.join(x.text or '' for x in p.iter(qn('w:t')))
+            if t.startswith('(g)'):
+                continue
+            self.assertIsNone(p.find(qn('w:pPr') + '/' + qn('w:numPr')), t)
+            ind = p.find(qn('w:pPr') + '/' + qn('w:ind'))
+            if t.strip():
+                self.assertIsNotNone(ind, t)
+                self.assertIsNone(ind.get(qn('w:hanging')), t)
+                self.assertEqual(ind.get(qn('w:firstLine')), '0', t)
+        for r in body.iter(qn('w:r')):
+            t = ''.join(x.text or '' for x in r.iter(qn('w:t')))
+            if t in ('{{P19F}}', '{{P23}}', '{{P24_SATISFIED}}', '{{P25}}'):
+                self.assertIsNone(r.find(qn('w:rPr') + '/' + qn('w:b')), t)
+            if t.startswith('{{'):
+                self.assertIsNone(r.find(qn('w:rPr') + '/' + qn('w:spacing')), t)
+            if t == '{{PROMOTION}}':
+                self.assertIsNone(r.find(qn('w:rPr') + '/' + qn('w:i')), t)
+
     def test_point_20_rows_line_up_with_header(self):
         qn = self.qn
         def spans(tr):
