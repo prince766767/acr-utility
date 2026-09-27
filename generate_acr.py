@@ -29,7 +29,33 @@ def set_cell(doc,ti,row,col,text):
     else: r=p.runs[0]
     r.text=str(text or '')
     r.font.color.rgb=BLUE
+    give_cell_font(p,r)
     for rr in p.runs[1:]: rr.text=''
+
+
+FORM_FONT='Times New Roman'
+
+
+def give_cell_font(p,r):
+    """A run with no font of its own falls back to the template default (Calibri 11). Give it the font and size set
+    on the cell's paragraph mark, or the form's Times New Roman when the mark has none."""
+    if r._r.rPr is not None and r._r.rPr.find(qn('w:rFonts')) is not None:
+        return
+    ppr=p._p.pPr
+    mark=ppr.find(qn('w:rPr')) if ppr is not None else None
+    fonts=mark.find(qn('w:rFonts')) if mark is not None else None
+    rpr=r._r.get_or_add_rPr()
+    rfonts=rpr.get_or_add_rFonts()  # python-docx puts it in its schema position
+    if fonts is not None and fonts.get(qn('w:ascii')):
+        for k,v in fonts.attrib.items(): rfonts.set(k,v)
+    else:
+        for k in ('w:ascii','w:hAnsi','w:cs'): rfonts.set(qn(k),FORM_FONT)
+    sz=mark.find(qn('w:sz')) if mark is not None else None
+    if sz is not None and rpr.find(qn('w:sz')) is None:
+        r.font.size=Pt(int(sz.get(qn('w:val')))/2)
+        szcs=mark.find(qn('w:szCs'))
+        if szcs is not None and rpr.find(qn('w:szCs')) is None:
+            rpr.find(qn('w:sz')).addnext(deepcopy(szcs))  # szCs follows sz in the schema
 
 
 def clone_row(table,row_idx):
