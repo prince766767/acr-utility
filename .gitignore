@@ -3,3 +3,4 @@ _pdf_render/
 *.intermediate.docx
 tests/out/
 .playwright-cli/
+node_modules/
