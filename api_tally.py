@@ -199,3 +199,39 @@ def tally(api):
         },
         'problems': problems,
     }
+
+
+# Last academic year (points 29 and 45, column 3): I, II and III of last year; I+II is always I + II.
+LY_PARTS = (('cat1', 'I', 12500), ('cat2', 'II', 2500), ('cat3', 'III', None))
+
+
+def last_year_problems(ly):
+    src = ly if isinstance(ly, dict) else {}
+    parsed = [to_cents(src.get(key)) for key, _, _ in LY_PARTS]
+    filled = sum(1 for state, _ in parsed if state != 'missing')
+    if filled == 0:
+        return []
+    if filled < len(LY_PARTS):
+        return [{'code': 'LY_PARTIAL', 'where': 'Last academic year',
+                 'message': 'Last academic year: fill I, II and III, or leave all three empty.'}]
+    problems = []
+    for (_, label, _), (state, _) in zip(LY_PARTS, parsed):
+        if state == 'bad':
+            where = f'Last academic year {label}'
+            problems.append({'code': 'BAD_SCORE', 'where': where,
+                             'message': f'{where}: score must be a number (0 or more) with at most 2 decimals.'})
+    for (_, label, max_c), (state, c) in zip(LY_PARTS, parsed):
+        if max_c is not None and state == 'ok' and c > max_c:
+            where = f'Last academic year {label}'
+            problems.append({'code': 'OVER_MAX', 'where': where,
+                             'message': f"{where} is {fmt(c)}; the form's maximum is {fmt(max_c)}."})
+    return problems
+
+
+def last_year_cells(ly):
+    src = ly if isinstance(ly, dict) else {}
+    parsed = [to_cents(src.get(key)) for key, _, _ in LY_PARTS]
+    if any(state != 'ok' for state, _ in parsed):
+        return {'cat1': '', 'cat2': '', 'total12': '', 'cat3': ''}
+    a, b, c = (cents for _, cents in parsed)
+    return {'cat1': fmt(a), 'cat2': fmt(b), 'total12': fmt(a + b), 'cat3': fmt(c)}

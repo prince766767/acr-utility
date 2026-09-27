@@ -1,0 +1,23 @@
+[
+  {"name": "nothing", "ly": {}, "problems": [], "cells": {"cat1": "", "cat2": "", "total12": "", "cat3": ""}},
+  {"name": "not an object", "ly": null, "problems": [], "cells": {"cat1": "", "cat2": "", "total12": "", "cat3": ""}},
+  {"name": "typed, all valid", "ly": {"cat1": "90", "cat2": "20", "cat3": "12.5", "source": "typed"}, "problems": [],
+   "cells": {"cat1": "90", "cat2": "20", "total12": "110", "cat3": "12.5"}},
+  {"name": "fetched strings and a stale total12 is recomputed", "ly": {"cat1": "106.75", "cat2": "25", "total12": "999", "cat3": "193", "source": "record", "from": "2024-25"},
+   "problems": [], "cells": {"cat1": "106.75", "cat2": "25", "total12": "131.75", "cat3": "193"}},
+  {"name": "numbers not strings", "ly": {"cat1": 0.1, "cat2": 0.2, "cat3": 0}, "problems": [],
+   "cells": {"cat1": "0.1", "cat2": "0.2", "total12": "0.3", "cat3": "0"}},
+  {"name": "partly filled", "ly": {"cat1": "90", "cat2": "", "cat3": "5"},
+   "problems": [{"code": "LY_PARTIAL", "where": "Last academic year", "message": "Last academic year: fill I, II and III, or leave all three empty."}],
+   "cells": {"cat1": "", "cat2": "", "total12": "", "cat3": ""}},
+  {"name": "bad numbers and over the maximum", "ly": {"cat1": "130", "cat2": "abc", "cat3": "1.234"},
+   "problems": [
+     {"code": "BAD_SCORE", "where": "Last academic year II", "message": "Last academic year II: score must be a number (0 or more) with at most 2 decimals."},
+     {"code": "BAD_SCORE", "where": "Last academic year III", "message": "Last academic year III: score must be a number (0 or more) with at most 2 decimals."},
+     {"code": "OVER_MAX", "where": "Last academic year I", "message": "Last academic year I is 130; the form's maximum is 125."}
+   ],
+   "cells": {"cat1": "", "cat2": "", "total12": "", "cat3": ""}},
+  {"name": "II just over 25; III has no maximum", "ly": {"cat1": "125", "cat2": "25.01", "cat3": "400"},
+   "problems": [{"code": "OVER_MAX", "where": "Last academic year II", "message": "Last academic year II is 25.01; the form's maximum is 25."}],
+   "cells": {"cat1": "125", "cat2": "25.01", "total12": "150.01", "cat3": "400"}}
+]

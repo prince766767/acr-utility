@@ -232,3 +232,38 @@ export function tally(rawApi) {
     problems,
   };
 }
+
+// Last academic year (points 29 and 45, column 3): I, II and III of last year; I+II is always I + II.
+const LY_PARTS = [['cat1', 'I', 12500], ['cat2', 'II', 2500], ['cat3', 'III', null]];
+
+export function lastYearProblems(ly) {
+  const src = ly && typeof ly === 'object' ? ly : {};
+  const parsed = LY_PARTS.map(([key]) => toCents(src[key]));
+  const filled = parsed.filter(p => p.state !== 'missing').length;
+  if (filled === 0) return [];
+  if (filled < LY_PARTS.length) {
+    return [{ code: 'LY_PARTIAL', where: 'Last academic year', message: 'Last academic year: fill I, II and III, or leave all three empty.' }];
+  }
+  const problems = [];
+  LY_PARTS.forEach(([, label], i) => {
+    if (parsed[i].state === 'bad') {
+      const where = `Last academic year ${label}`;
+      problems.push({ code: 'BAD_SCORE', where, message: `${where}: score must be a number (0 or more) with at most 2 decimals.` });
+    }
+  });
+  LY_PARTS.forEach(([, label, max], i) => {
+    if (max !== null && parsed[i].state === 'ok' && parsed[i].cents > max) {
+      const where = `Last academic year ${label}`;
+      problems.push({ code: 'OVER_MAX', where, message: `${where} is ${fmt(parsed[i].cents)}; the form's maximum is ${fmt(max)}.` });
+    }
+  });
+  return problems;
+}
+
+export function lastYearCells(ly) {
+  const src = ly && typeof ly === 'object' ? ly : {};
+  const parsed = LY_PARTS.map(([key]) => toCents(src[key]));
+  if (parsed.some(p => p.state !== 'ok')) return { cat1: '', cat2: '', total12: '', cat3: '' };
+  const [a, b, c] = parsed.map(p => p.cents);
+  return { cat1: fmt(a), cat2: fmt(b), total12: fmt(a + b), cat3: fmt(c) };
+}
