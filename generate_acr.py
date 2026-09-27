@@ -8,6 +8,7 @@ from docx import Document
 from docx.shared import RGBColor, Inches, Pt
 from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from api_tally import tally, is_empty_entry, score_text, LEVEL_TEXT
 
 HERE=Path(__file__).resolve().parent
 TEMPLATE=HERE/'ACR_EMPLOYEE_MASTER.docx'
@@ -45,39 +46,152 @@ def fill_rows(doc,ti,rows,start=1):
         for c in range(len(t.columns)): set_cell(doc,ti,start+i,c, vals[c] if c<len(vals) else '')
 
 
-def score_classes(teaching):
-    vals=[]
-    for x in teaching:
-        if x.get('percent') is not None:
-            try: vals.append(float(x['percent']))
-            except: pass
-        else:
-            a=x.get('allocated'); d=x.get('delivered')
-            try:
-                a=float(a); d=float(d); vals.append(100*d/a if a else 0)
-            except: pass
-    pct=sum(vals)/len(vals) if vals else 0
-    return (50*pct/100 if pct>=80 else 0), pct
+class ApiProblemsError(Exception):
+    """The teacher's API entries have problems; the ACR must not be generated."""
+    def __init__(self, problems):
+        self.problems = problems
+        super().__init__('\n'.join(p['message'] for p in problems))
 
 
-def api_scores(data):
-    api=data.get('api',{}); a=data.get('part2',{})
-    teaching=a.get('teaching',[])
-    c1_classes,pct=score_classes(teaching)
-    extra=float(api.get('extraHours',0) or 0)
-    c1_extra=min(10,2*extra)
-    compliance=float(api.get('knowledgeCompliance',0) or 0)
-    c1_knowledge=min(20,20*compliance/100)
-    # Innovative: indicators supplied as point values; total capped at 20.
-    innov=float(api.get('innovativePoints',0) or 0); c1_innov=min(20,innov)
-    # Examination duty compliance weighted against max 25.
-    exam=float(api.get('examPoints',0) or 0); c1_exam=min(25,exam)
-    c1=min(125,c1_classes+c1_extra+c1_knowledge+c1_innov+c1_exam)
-    # Category II: accept rule-derived raw component scores, cap reportable total at 25.
-    c2e=min(20,float(api.get('extensionPoints',0) or 0)); c2m=min(15,float(api.get('managementPoints',0) or 0)); c2p=min(15,float(api.get('professionalPoints',0) or 0))
-    c2=min(25,c2e+c2m+c2p)
-    c3=float(api.get('category3Total',0) or 0)
-    return {'classes':c1_classes,'classPct':pct,'extra':c1_extra,'knowledge':c1_knowledge,'innovative':c1_innov,'exam':c1_exam,'cat1':c1,'c2e':c2e,'c2m':c2m,'c2p':c2p,'cat2':c2,'cat3':c3,'total12':c1+c2}
+# Point 44 "API Score reported in self appraisal" cells: code -> (table, row, column, start of Max. Score text).
+# The Max. Score column is the column just before the API column; it is checked before writing.
+P44_CELLS = {
+    'A1': (27, 3, 4, '15/'), 'A2': (27, 4, 4, '10/'), 'B1a': (27, 5, 4, '10/'), 'B1b': (27, 6, 4, '5/'),
+    'B2': (28, 0, 4, '10/'), 'B3a': (28, 1, 4, '50/'), 'B3b': (28, 2, 4, '25/'), 'B3c': (28, 3, 4, '15/'),
+    'C1a': (28, 4, 4, '20/'), 'C1b': (28, 5, 4, '15/'), 'C1c': (28, 6, 4, '10/'),
+    'C2': (29, 0, 5, '10/'), 'C3': (29, 1, 5, '20/'), 'C4': (29, 2, 5, '30/'),
+    'D1': (29, 3, 5, '3/'), 'D2a': (29, 4, 5, '10/'), 'D2b': (29, 5, 5, '7/'),
+    'E1a': (29, 6, 5, '20/'), 'E1b': (29, 7, 5, '10/'),
+    'E2a': (29, 8, 5, '10/'), 'E2b': (29, 9, 5, '7.5/'), 'E2c': (29, 10, 5, '5/'), 'E2d': (29, 11, 5, '3/'),
+    'E3a': (30, 0, 4, '10/'), 'E3b': (30, 1, 4, '5/'),
+}
+
+
+def _norm(s):
+    return re.sub(r'\s+', '', s or '')
+
+
+def _check(ok, ti, what):
+    if not ok:
+        raise RuntimeError(f'Template table {ti}: expected {what}. The template layout has changed; nothing was written.')
+
+
+def find_row(table, col, prefix, start=0):
+    for r in range(start, len(table.rows)):
+        if _norm(table.rows[r].cells[col].text).startswith(_norm(prefix)):
+            return r
+    raise RuntimeError(f'Template: no row starting with "{prefix}" in column {col}.')
+
+
+def fill_between(doc, ti, first, end, rows):
+    """Write rows into table ti from row `first`, before row `end`; clone blank entry rows when more are needed."""
+    t = doc.tables[ti]
+    free = end - first
+    for _ in range(len(rows) - free):
+        clone_row(t, end - 1)
+    for i, vals in enumerate(rows):
+        for c, v in enumerate(vals):
+            set_cell(doc, ti, first + i, c, v)
+
+
+def entries(api, group, name):
+    g = api.get(group) if isinstance(api.get(group), dict) else {}
+    lst = g.get(name) if isinstance(g.get(name), list) else []
+    return [e for e in lst if not is_empty_entry(e)]
+
+
+def field(e, key):
+    v = e.get(key)
+    return '' if v is None else str(v)
+
+
+def fill_api_tables(doc, api, v):
+    T = doc.tables
+    # 26(i)(a), (b)
+    _check(_norm(T[8].rows[1].cells[0].text) == '(a)' and _norm(T[8].rows[2].cells[0].text) == '(b)', 8, '(a)/(b) rows')
+    set_cell(doc, 8, 1, 2, v['p42']['i_a'])
+    set_cell(doc, 8, 2, 2, v['p42']['i_b'])
+    # 26(ii)
+    fill_between(doc, 9, 1, find_row(T[9], 0, '**Besides'),
+                 [[i, field(e, 'course'), field(e, 'consulted'), field(e, 'prescribed'), field(e, 'additional')]
+                  for i, e in enumerate(entries(api, 'c1', 'resources'), 1)])
+    score_row = find_row(T[9], 0, 'APIscorebased') + 1
+    _check(_norm(T[9].rows[score_row - 1].cells[4].text) == 'APIScore', 9, '"API Score" above the 26(ii) score cell')
+    set_cell(doc, 9, score_row, 4, v['p42']['ii'])
+    # 26(iii)
+    fill_between(doc, 10, 1, find_row(T[10], 1, 'Total Score'),
+                 [[i, field(e, 'description'), score_text(e.get('score'))] for i, e in enumerate(entries(api, 'c1', 'innovative'), 1)])
+    set_cell(doc, 10, find_row(T[10], 1, 'Total Score'), 2, v['p42']['iii'])
+    # 26(iv)
+    fill_between(doc, 11, 1, find_row(T[11], 1, 'Total Score'),
+                 [[i, field(e, 'type'), field(e, 'assigned'), field(e, 'extent'), score_text(e.get('score'))]
+                  for i, e in enumerate(entries(api, 'c1', 'exam'), 1)])
+    set_cell(doc, 11, find_row(T[11], 1, 'Total Score'), 4, v['p42']['iv'])
+    # 27 (i), (ii), (iii)
+    for heading, total_label, name, col2, total in (('(i)', 'Total (Max.20)', 'extension', 'hours', v['p43']['i']),
+                                                    ('(ii)', 'Total (Max.15)', 'management', 'responsibility', v['p43']['ii']),
+                                                    ('(iii)', 'Total (Max.15)', 'professional', 'details', v['p43']['iii'])):
+        h = find_row(T[12], 1, heading)
+        end = find_row(T[12], 1, total_label, h + 1)
+        fill_between(doc, 12, h + 1, end,
+                     [[i, field(e, 'activity'), field(e, col2), score_text(e.get('score'))] for i, e in enumerate(entries(api, 'c2', name), 1)])
+        set_cell(doc, 12, find_row(T[12], 1, total_label, h + 1), 3, total)
+    set_cell(doc, 12, find_row(T[12], 1, 'Total Score'), 3, v['p43']['total'])
+    # 28 A ... E(iii) detail tables
+    sc = lambda e: score_text(e.get('score'))
+    fill_rows(doc, 13, [[i, field(e, 'title'), field(e, 'journal'), field(e, 'issn'), field(e, 'peer'), field(e, 'coauthors'), field(e, 'mainAuthor'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'journals'), 1)], 1)
+    fill_rows(doc, 14, [[i, field(e, 'title'), field(e, 'book'), field(e, 'issn'), field(e, 'peer'), field(e, 'coauthors'), field(e, 'mainAuthor'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'chapters'), 1)], 1)
+    fill_rows(doc, 15, [[i, field(e, 'title'), field(e, 'conference'), field(e, 'issn'), field(e, 'coauthors'), field(e, 'mainAuthor'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'proceedings'), 1)], 1)
+    fill_rows(doc, 16, [[i, field(e, 'title'), field(e, 'type'), field(e, 'publisher'), field(e, 'peer'), field(e, 'coauthors'), field(e, 'mainAuthor'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'books'), 1)], 1)
+    fill_rows(doc, 17, [[i, field(e, 'title'), field(e, 'agency'), field(e, 'period'), field(e, 'amount'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'ongoing'), 1)], 1)
+    fill_rows(doc, 18, [[i, field(e, 'title'), field(e, 'agency'), field(e, 'period'), field(e, 'amount'), field(e, 'outcome'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'completed'), 1)], 1)
+    g = api.get('c3', {}).get('guidance', {}) if isinstance(api.get('c3'), dict) else {}
+    g = g if isinstance(g, dict) else {}
+    _check(T[19].rows[1].cells[0].text.startswith('M.Phil') and T[19].rows[2].cells[0].text.startswith('Ph.D'), 19, 'M.Phil / Ph.D rows')
+    for c, key in ((1, 'mphilEnrolled'), (2, 'mphilSubmitted'), (3, 'mphilAwarded')):
+        set_cell(doc, 19, 1, c, field(g, key))
+    set_cell(doc, 19, 1, 4, v['p44']['D1'])
+    for c, key in ((1, 'phdEnrolled'), (2, 'phdSubmitted'), (3, 'phdAwarded')):
+        set_cell(doc, 19, 2, c, field(g, key))
+    set_cell(doc, 19, 2, 4, v['p28']['phd'])
+    fill_rows(doc, 20, [[i, field(e, 'programme'), field(e, 'duration'), field(e, 'organisedBy'), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'training'), 1)], 1)
+    fill_rows(doc, 21, [[i, field(e, 'title'), field(e, 'conference'), field(e, 'organisedBy'), LEVEL_TEXT.get(e.get('row'), ''), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'papers'), 1)], 1)
+    fill_rows(doc, 22, [[i, field(e, 'title'), field(e, 'conference'), field(e, 'organisedBy'), LEVEL_TEXT.get(e.get('row'), ''), sc(e)]
+                        for i, e in enumerate(entries(api, 'c3', 'lectures'), 1)], 1)
+    # 29: column 4 from the tally; column 3 keeps its existing source (api.lastAcademicYear).
+    lay = api.get('lastAcademicYear') if isinstance(api.get('lastAcademicYear'), dict) else {}
+    for r, label, key, value in ((1, 'Teaching', 'cat1', v['p29']['I']), (2, 'Co-curricular', 'cat2', v['p29']['II']),
+                                 (3, 'Total', 'total12', v['p29']['I_II']), (4, 'Research', 'cat3', v['p29']['III'])):
+        _check(_norm(T[23].rows[r].cells[1].text).startswith(label), 23, f'row {r} starting "{label}"')
+        set_cell(doc, 23, r, 2, lay.get(key, ''))
+        set_cell(doc, 23, r, 3, value)
+    # 42: column 4
+    for r, label, key in ((3, '(i)a', 'i_a'), (4, '(i)b', 'i_b'), (5, '(ii)', 'ii'), (6, '(iii)', 'iii'), (7, '(iv)', 'iv')):
+        _check(_norm(T[25].rows[r].cells[0].text) == label, 25, f'row {r} "{label}"')
+        set_cell(doc, 25, r, 3, v['p42'][key])
+    _check(_norm(T[25].rows[8].cells[1].text).startswith('TotalScore'), 25, 'Total Score row')
+    set_cell(doc, 25, 8, 3, v['p42']['total'])
+    # 43: column 4
+    for r, label, key in ((3, '(i)', 'i'), (4, '(ii)', 'ii'), (5, '(iii)', 'iii')):
+        _check(_norm(T[26].rows[r].cells[0].text) == label, 26, f'row {r} "{label}"')
+        set_cell(doc, 26, r, 3, v['p43'][key])
+    _check(_norm(T[26].rows[6].cells[1].text).startswith('TotalScore'), 26, 'Total Score row')
+    set_cell(doc, 26, 6, 3, v['p43']['total'])
+    # 44: column 5, one cell per sub-row, then Total
+    for code, (ti, r, c, max_prefix) in P44_CELLS.items():
+        _check(_norm(T[ti].rows[r].cells[c - 1].text).startswith(max_prefix), ti, f'row {r} Max. Score "{max_prefix}" for {code}')
+        _check(T[ti].rows[r].cells[c].text.strip() == '', ti, f'empty API cell for {code}')
+        set_cell(doc, ti, r, c, v['p44'][code])
+    _check(_norm(T[30].rows[2].cells[1].text) == 'Total', 30, 'Total row')
+    set_cell(doc, 30, 2, 4, v['p44']['total'])
 
 
 def replace_tokens(docx_path, out_path, values):
@@ -144,10 +258,14 @@ def prepare_appendix_images():
 
 
 def generate(data,out_docx):
+    api=data.get('api') if isinstance(data.get('api'),dict) else {}
+    result=tally(api)
+    if result['problems']:
+        raise ApiProblemsError(result['problems'])
+    v=result['values']
     prepare_appendix_images()
     doc=Document(TEMPLATE)
-    p=data.get('profile',{}); a=data.get('part2',{}); api=data.get('api',{})
-    scores=api_scores(data)
+    p=data.get('profile',{}); a=data.get('part2',{})
     # Profile/certification tokens.
     values={
       'COLLEGE_NAME':data.get('college',{}).get('name',''), 'COLLEGE_DISTRICT_PIN':data.get('college',{}).get('districtPin',''),
@@ -192,35 +310,7 @@ def generate(data,out_docx):
             src=a.get('teaching',[])[i-1]
             vals=[i,src.get('coursePaper',src.get('classCourse',src.get('class',''))),src.get('level',''),src.get('mode',''),src.get('allocated',''),src.get('delivered',''),src.get('percent',x[-1])]
             for c,v in enumerate(vals): set_cell(doc,7,row,c,v)
-    set_cell(doc,8,1,2,f"{scores['classes']:.2f}"); set_cell(doc,8,2,2,f"{scores['extra']:.2f}")
-    # resources
-    fill_rows(doc,9,[[i+1,x.get('course',''),x.get('consulted',''),x.get('prescribed',''),x.get('additional','')] for i,x in enumerate(api.get('resources',[]))],1)
-    set_cell(doc,9,6,4,f"{scores['knowledge']:.2f}")
-    fill_rows(doc,10,[[i+1,x.get('description',''),x.get('score','')] for i,x in enumerate(api.get('innovativeActivities',[]))],1)
-    set_cell(doc,10,3,2,f"{scores['innovative']:.2f}")
-    fill_rows(doc,11,[[i+1,x.get('type',''),x.get('duties',''),x.get('extent',''),x.get('score','')] for i,x in enumerate(api.get('examDuties',[]))],1)
-    set_cell(doc,11,3,4,f"{scores['exam']:.2f}")
-    # Category II detail table
-    c2rows=api.get('category2Rows',[])
-    fill_rows(doc,12,[[x.get('sn',''),x.get('type',''),x.get('hours',''),x.get('score','')] for x in c2rows],2)
-    set_cell(doc,12,4,3,f"{scores['c2e']:.2f}"); set_cell(doc,12,8,3,f"{scores['c2m']:.2f}"); set_cell(doc,12,10,3,f"{scores['c2p']:.2f}"); set_cell(doc,12,11,3,f"{scores['cat2']:.2f}")
-    # Category III tables
-    fill_rows(doc,13,[[i+1,x.get('title',''),x.get('journal',''),x.get('issn',''),x.get('peer',''),x.get('coauthors',''),x.get('author',''),x.get('score','')] for i,x in enumerate(api.get('journalPapers',[]))],1)
-    fill_rows(doc,14,[[i+1,x.get('title',''),x.get('book',''),x.get('issn',''),x.get('peer',''),x.get('coauthors',''),x.get('mainAuthor',''),x.get('score','')] for i,x in enumerate(api.get('bookChapters',[]))],1)
-    fill_rows(doc,15,[[i+1,x.get('title',''),x.get('conference',''),x.get('issn',''),x.get('coauthors',''),x.get('mainAuthor',''),x.get('score','')] for i,x in enumerate(api.get('conferenceProceedings',[]))],1)
-    fill_rows(doc,16,[[i+1,x.get('title',''),x.get('type',''),x.get('publisher',''),x.get('peer',''),x.get('coauthors',''),x.get('author',''),x.get('score','')] for i,x in enumerate(api.get('books',[]))],1)
-    fill_rows(doc,17,[[i+1,x.get('title',''),x.get('agency',''),x.get('period',''),x.get('amount',''),x.get('score','')] for i,x in enumerate(api.get('ongoingProjects',[]))],1)
-    fill_rows(doc,18,[[i+1,x.get('title',''),x.get('agency',''),x.get('period',''),x.get('amount',''),x.get('outcome',''),x.get('score','')] for i,x in enumerate(api.get('completedProjects',[]))],1)
-    rg=api.get('researchGuidance',{})
-    set_cell(doc,19,1,1,rg.get('mphilEnrolled','')); set_cell(doc,19,1,2,rg.get('mphilSubmitted','')); set_cell(doc,19,1,3,rg.get('mphilAwarded','')); set_cell(doc,19,1,4,rg.get('mphilScore',''))
-    set_cell(doc,19,2,1,rg.get('phdEnrolled','')); set_cell(doc,19,2,2,rg.get('phdSubmitted','')); set_cell(doc,19,2,3,rg.get('phdAwarded','')); set_cell(doc,19,2,4,rg.get('phdScore',''))
-    fill_rows(doc,20,[[i+1,x.get('programme',''),x.get('duration',''),x.get('organisedBy',''),x.get('score','')] for i,x in enumerate(api.get('training',[]))],1)
-    fill_rows(doc,21,[[i+1,x.get('title',''),x.get('conference',''),x.get('organisedBy',''),x.get('level',''),x.get('score','')] for i,x in enumerate(api.get('conferencePapers',[]))],1)
-    fill_rows(doc,22,[[i+1,x.get('title',''),x.get('conference',''),x.get('organisedBy',''),x.get('level',''),x.get('score','')] for i,x in enumerate(api.get('invitedLectures',[]))],1)
-    set_cell(doc,23,1,2,api.get('lastAcademicYear',{}).get('cat1','')); set_cell(doc,23,1,3,f"{scores['cat1']:.2f}")
-    set_cell(doc,23,2,2,api.get('lastAcademicYear',{}).get('cat2','')); set_cell(doc,23,2,3,f"{scores['cat2']:.2f}")
-    set_cell(doc,23,3,2,api.get('lastAcademicYear',{}).get('total12','')); set_cell(doc,23,3,3,f"{scores['total12']:.2f}")
-    set_cell(doc,23,4,2,api.get('lastAcademicYear',{}).get('cat3','')); set_cell(doc,23,4,3,f"{scores['cat3']:.2f}")
+    fill_api_tables(doc,api,v)
     # other info table 24
     for i,x in enumerate(a.get('otherRelevant',[]),1):
         if i < len(doc.tables[24].rows): set_cell(doc,24,i,0,i); set_cell(doc,24,i,1,x)
@@ -246,10 +336,17 @@ def generate(data,out_docx):
     # Append the three official instruction pages to reach the 30-page source format.
     for n in (28,29,30): add_page_break_image(doc, APPENDIX_DIR/f'page-{n}.png')
     doc.save(out_docx)
-    return scores
+    return v
 
 if __name__=='__main__':
     import argparse
     ap=argparse.ArgumentParser(); ap.add_argument('json'); ap.add_argument('-o','--output',default='ACR_generated_v03.docx'); args=ap.parse_args()
     d=json.loads(Path(args.json).read_text(encoding='utf-8'))
-    s=generate(d,Path(args.output)); print(json.dumps(s,indent=2))
+    try:
+        values=generate(d,Path(args.output))
+    except ApiProblemsError as err:
+        import sys
+        print('ACR not generated. Fix these API entries first:',file=sys.stderr)
+        for prob in err.problems: print(' - '+prob['message'],file=sys.stderr)
+        sys.exit(1)
+    print(json.dumps(values,indent=2))
