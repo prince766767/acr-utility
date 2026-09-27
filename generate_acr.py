@@ -8,7 +8,7 @@ from docx import Document
 from docx.shared import RGBColor, Inches, Pt
 from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from api_tally import tally, is_empty_entry, score_text, LEVEL_TEXT
+from api_tally import tally, is_empty_entry, score_text, LEVEL_TEXT, last_year_problems, last_year_cells
 from docx.oxml.ns import qn
 from docx.text.run import Run
 from acr_fields import token_values, part_tables, field_problems, TITLES, RELATIONS
@@ -198,13 +198,15 @@ def fill_api_tables(doc, api, v):
                         for i, e in enumerate(entries(api, 'c3', 'papers'), 1)], 1)
     fill_rows(doc, 22, [[i, field(e, 'title'), field(e, 'conference'), field(e, 'organisedBy'), LEVEL_TEXT.get(e.get('row'), ''), sc(e)]
                         for i, e in enumerate(entries(api, 'c3', 'lectures'), 1)], 1)
-    # 29: column 4 from the tally; column 3 keeps its existing source (api.lastAcademicYear).
-    lay = api.get('lastAcademicYear') if isinstance(api.get('lastAcademicYear'), dict) else {}
+    # 29 and 45: column 3 = last academic year (I+II computed), column 4 = this year's totals; 45 col 5 is the Principal's.
+    ly = last_year_cells(api.get('lastAcademicYear'))
+    _check(_norm(T[31].rows[0].cells[2].text).startswith('LastAcademic'), 31, 'the "Last Academic Year" header of point 45')
     for r, label, key, value in ((1, 'Teaching', 'cat1', v['p29']['I']), (2, 'Co-curricular', 'cat2', v['p29']['II']),
                                  (3, 'Total', 'total12', v['p29']['I_II']), (4, 'Research', 'cat3', v['p29']['III'])):
-        _check(_norm(T[23].rows[r].cells[1].text).startswith(label), 23, f'row {r} starting "{label}"')
-        set_cell(doc, 23, r, 2, lay.get(key, ''))
-        set_cell(doc, 23, r, 3, value)
+        for ti in (23, 31):
+            _check(_norm(T[ti].rows[r].cells[1].text).startswith(label), ti, f'row {r} starting "{label}"')
+            set_cell(doc, ti, r, 2, ly[key])
+            set_cell(doc, ti, r, 3, value)
     # 42: column 4
     for r, label, key in ((3, '(i)a', 'i_a'), (4, '(i)b', 'i_b'), (5, '(ii)', 'ii'), (6, '(iii)', 'iii'), (7, '(iv)', 'iv')):
         _check(_norm(T[25].rows[r].cells[0].text) == label, 25, f'row {r} "{label}"')
@@ -338,7 +340,7 @@ def strike_unchosen(doc, starts_with, options, chosen):
 def generate(data,out_docx):
     api=data.get('api') if isinstance(data.get('api'),dict) else {}
     result=tally(api)
-    problems=field_problems(data)+result['problems']
+    problems=field_problems(data)+result['problems']+last_year_problems(api.get('lastAcademicYear'))
     if problems:
         raise ProblemsError(problems)
     v=result['values']
