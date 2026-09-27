@@ -7,6 +7,7 @@ import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
 import { parseDob, dobWords, fieldProblems, migrateDraft } from './acr_fields.js';
 import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
+import { generateDocx, ProblemsError } from './docx_engine.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -151,6 +152,7 @@ function renderFieldProblems(d){
   const ul=$('reviewProblems'); ul.innerHTML='';
   const probs=[...fieldProblems(d),...tally(d.api).problems,...lastYearProblems(d.api.lastAcademicYear)];
   if(!lastYearCells(d.api.lastAcademicYear).cat1&&!lastYearProblems(d.api.lastAcademicYear).length){const w=document.createElement('li');w.className='warn';w.textContent='Last academic year figures are not filled in.';ul.appendChild(w);}
+  $('downloadDocxBtn').disabled=probs.length>0; $('docxReason').textContent=probs.length?'Fix the problems listed above first.':'';
   if(!probs.length){const li=document.createElement('li');li.className='ok';li.textContent='No problems. The ACR can be generated.';ul.appendChild(li);return;}
   for(const p of probs){const li=document.createElement('li');li.textContent=p.message;ul.appendChild(li);}
 }
@@ -180,6 +182,22 @@ $('session').addEventListener('change',()=>{
   if(action==='new'){sessions.saveRecord(store,sessions.newRecordFrom(collectSimple(),target)); status.textContent=`Started the ${target} record (profile copied; annual parts empty).`;}
   else status.textContent=`Opened the ${target} record.`;
   openSession(target);
+});
+$('downloadDocxBtn').addEventListener('click',async()=>{
+  const status=$('docxStatus'), d=saveLocal();
+  status.textContent='Making the Word file…';
+  try{
+    const resp=await fetch('ACR_EMPLOYEE_MASTER.docx');
+    if(!resp.ok) throw new Error('The Word template could not be loaded.');
+    const bytes=new Uint8Array(await resp.arrayBuffer());
+    const out=await generateDocx(d,bytes,{JSZip:window.JSZip,DOMParser,XMLSerializer});
+    const name=`ACR_${d.session||'draft'}.docx`;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+    a.download=name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+    status.textContent=`Word file ready: ${name}`;
+  }catch(err){console.error(err); status.textContent=err instanceof ProblemsError?'Fix the problems listed above first.':(err.message||String(err));}
 });
 
 function updateProgress(){const d=collectSimple();let done=0,total=0;const must=[['fullName','Profile'],['employeeCode','Profile'],['subject','Profile'],['designation','Profile'],['p17','17'],['p18','18'],['p19b','19b'],['p21i','21i'],['p25','25']];must.forEach(([k])=>{total++; const v=d.profile[k]??d.part2[k]; if(String(v||'').trim())done++;}); total+=4; if(d.teaching.length)done++; if(d.assignments.length)done++; if(d.results.length)done++; if(d.enclosures.some(x=>x.checked))done++; const pct=Math.round(done/total*100);$('progressBar').style.width=`${pct}%`;$('progressText').textContent=`${pct}%`;}

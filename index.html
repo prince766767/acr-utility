@@ -297,7 +297,17 @@
           <div id="reviewList" class="review-list"></div>
           <h3>Problems to fix before the ACR can be generated</h3>
           <ul id="reviewProblems" class="problems"></ul>
-          <p class="muted">The Word ACR is made on a PC: Export Draft, then run <code>python generate_acr.py &lt;file&gt; -o ACR.docx</code>.</p>
+          <div class="docx-box">
+            <button type="button" id="downloadDocxBtn">Download Word file (.docx)</button>
+            <span id="docxReason" class="muted"></span>
+            <p id="docxStatus" class="muted" role="status"></p>
+            <details>
+              <summary>Make a PDF or print on a phone</summary>
+              <p><strong>Microsoft Word app:</strong> open the downloaded file, then the ⋯ (More) menu → <em>Save as</em> or <em>Export</em> → PDF; or ⋯ → <em>Print</em>.</p>
+              <p><strong>Google Docs:</strong> open the file, then ⋮ → <em>Share &amp; export</em> → <em>Save as</em> → PDF document; or ⋮ → <em>Share &amp; export</em> → <em>Print</em>. Google Docs may lay some pages out slightly differently from Word.</p>
+            </details>
+          </div>
+          <p class="muted">On a PC the Word file can also be made with <code>python generate_acr.py &lt;exported file&gt; -o ACR.docx</code>; both give the same file.</p>
         </div>
       </section>
     </form>
@@ -376,6 +386,7 @@
     </div>
   </template>
 
+  <script src="vendor/jszip.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

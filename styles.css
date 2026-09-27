@@ -16,3 +16,5 @@ input.over,strong.over{color:var(--danger);border-color:var(--danger);font-weigh
 #dobWords{display:block;margin-top:4px}
 small.over{color:var(--danger);font-weight:600}
 .problems li.warn{color:#8a5a00}
+.docx-box{margin-top:12px}
+.docx-box details{margin-top:8px}
