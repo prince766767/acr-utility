@@ -170,41 +170,89 @@
       <section id="api" class="section">
         <div class="card">
           <h2>Part II — Section II: PBAS / API (26–29)</h2>
-          <p class="warning">This v0.1 prototype stores the API inputs and calculates the visible category totals. The final scoring rules will be locked only after we map every scoring instruction in the supplied ACR.</p>
+          <p class="muted">Type the API score you claim for each item. The app adds them up into point 29 and into the self-appraisal columns of points 42, 43 and 44. Nothing is calculated for you; the rates in the lists are a guide only.</p>
+          <p id="apiLegacyNotice" class="warning hidden"></p>
         </div>
+
         <div class="card">
-          <h3>26. Category I — Teaching, Learning & Evaluation</h3>
+          <h3>26. Category I — Teaching, Learning &amp; Evaluation</h3>
           <div class="grid two">
-            <label>Classes Taken score (max 50)<input name="apiC1Classes" type="number" min="0" max="50" step="0.01" readonly></label>
-            <label>Excess teaching load score (max 10)<input name="apiC1Excess" type="number" min="0" max="10" step="0.01" readonly></label>
-            <label>Additional resources score (max 20)<input name="apiC1Resources" type="number" min="0" max="20" step="0.01" readonly></label>
-            <label>Innovative methodologies score (max 20)<input name="apiC1Innovative" type="number" min="0" max="20" step="0.01" readonly></label>
-            <label>Examination duties score (max 25)<input name="apiC1Exam" type="number" min="0" max="25" step="0.01" readonly></label>
+            <label>26(i)(a) Classes taken — API score (max 50)<input data-api-field="c1.classes" data-where="26(i)(a)" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>26(i)(b) Teaching load in excess of UGC norm — API score (max 10)<input data-api-field="c1.excess" data-where="26(i)(b)" type="number" min="0" step="0.01" inputmode="decimal"></label>
           </div>
-          <div class="score-box">Category I total: <strong id="cat1Total">0.00 / 125</strong></div>
+          <div class="section-heading"><div><h4>26(ii) Reading / instructional material consulted</h4></div><button type="button" class="secondary" data-api-add="c1.resources">+ Add Course</button></div>
+          <div id="list-c1-resources" class="repeatable"></div>
+          <label>26(ii) API score (max 20)<input data-api-field="c1.resourcesScore" data-where="26(ii)" type="number" min="0" step="0.01" inputmode="decimal"></label>
+          <div class="section-heading"><div><h4>26(iii) Participatory &amp; innovative teaching-learning methods</h4></div><button type="button" class="secondary" data-api-add="c1.innovative">+ Add Item</button></div>
+          <div id="list-c1-innovative" class="repeatable"></div>
+          <div class="score-box">26(iii) total: <strong data-sum="p42.iii" data-max="20" data-where="26(iii) total"></strong></div>
+          <div class="section-heading"><div><h4>26(iv) Examination duties assigned and performed</h4></div><button type="button" class="secondary" data-api-add="c1.exam">+ Add Duty</button></div>
+          <div id="list-c1-exam" class="repeatable"></div>
+          <div class="score-box">26(iv) total: <strong data-sum="p42.iv" data-max="25" data-where="26(iv) total"></strong></div>
+          <div class="score-box">Category I total: <strong data-sum="p42.total" data-max="125" data-where="Category I total"></strong></div>
+        </div>
+
+        <div class="card">
+          <h3>27. Category II — Co-curricular, Extension, Professional Development</h3>
+          <div class="section-heading"><div><h4>27(i) Extension, co-curricular &amp; field based activities</h4></div><button type="button" class="secondary" data-api-add="c2.extension">+ Add Activity</button></div>
+          <div id="list-c2-extension" class="repeatable"></div>
+          <div class="score-box">27(i) total: <strong data-sum="p43.i" data-max="20" data-where="27(i) total"></strong></div>
+          <div class="section-heading"><div><h4>27(ii) Contribution to corporate life and management of the institution</h4></div><button type="button" class="secondary" data-api-add="c2.management">+ Add Activity</button></div>
+          <div id="list-c2-management" class="repeatable"></div>
+          <div class="score-box">27(ii) total: <strong data-sum="p43.ii" data-max="15" data-where="27(ii) total"></strong></div>
+          <div class="section-heading"><div><h4>27(iii) Professional development activities</h4></div><button type="button" class="secondary" data-api-add="c2.professional">+ Add Activity</button></div>
+          <div id="list-c2-professional" class="repeatable"></div>
+          <div class="score-box">27(iii) total: <strong data-sum="p43.iii" data-max="15" data-where="27(iii) total"></strong></div>
+          <div class="score-box">Category II total: <strong data-sum="p43.total" data-max="25"></strong> <span id="cat2CapNote" class="muted"></span></div>
+        </div>
+
+        <div class="card">
+          <h3>28. Category III — Research, Publications &amp; Academic Contributions</h3>
+          <p class="muted">For every entry, choose the point-44 row it belongs to. Its score is added to that row of point 44.</p>
+          <div class="section-heading"><div><h4>A. Published papers in journals</h4></div><button type="button" class="secondary" data-api-add="c3.journals">+ Add Paper</button></div>
+          <div id="list-c3-journals" class="repeatable"></div>
+          <div class="section-heading"><div><h4>B(i) Articles / chapters published in books</h4></div><button type="button" class="secondary" data-api-add="c3.chapters">+ Add Chapter</button></div>
+          <div id="list-c3-chapters" class="repeatable"></div>
+          <div class="section-heading"><div><h4>B(ii) Full papers in conference proceedings</h4></div><button type="button" class="secondary" data-api-add="c3.proceedings">+ Add Paper</button></div>
+          <div id="list-c3-proceedings" class="repeatable"></div>
+          <div class="section-heading"><div><h4>B(iii) Books published as single / co-author or as editor</h4></div><button type="button" class="secondary" data-api-add="c3.books">+ Add Book</button></div>
+          <div id="list-c3-books" class="repeatable"></div>
+          <div class="section-heading"><div><h4>C(i &amp; ii) Ongoing projects / consultancies</h4></div><button type="button" class="secondary" data-api-add="c3.ongoing">+ Add Project</button></div>
+          <div id="list-c3-ongoing" class="repeatable"></div>
+          <div class="section-heading"><div><h4>C(iii &amp; iv) Completed projects / consultancies</h4></div><button type="button" class="secondary" data-api-add="c3.completed">+ Add Project</button></div>
+          <div id="list-c3-completed" class="repeatable"></div>
+          <h4>D. Research guidance</h4>
+          <div class="grid guidance-grid">
+            <strong>M.Phil or equivalent</strong>
+            <label>Number enrolled<input data-api-field="c3.guidance.mphilEnrolled" type="number" min="0" step="1"></label>
+            <label>Thesis submitted<input data-api-field="c3.guidance.mphilSubmitted" type="number" min="0" step="1"></label>
+            <label>Degree awarded<input data-api-field="c3.guidance.mphilAwarded" type="number" min="0" step="1"></label>
+            <label>API score — D(i), degree awarded (3 / candidate)<input data-api-field="c3.guidance.mphilScore" data-where="28 D M.Phil score" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <strong>Ph.D or equivalent</strong>
+            <label>Number enrolled<input data-api-field="c3.guidance.phdEnrolled" type="number" min="0" step="1"></label>
+            <label>Thesis submitted<input data-api-field="c3.guidance.phdSubmitted" type="number" min="0" step="1"></label>
+            <label>Degree awarded<input data-api-field="c3.guidance.phdAwarded" type="number" min="0" step="1"></label>
+            <label>API score — D(ii), degree awarded (10 / candidate)<input data-api-field="c3.guidance.phdAwardedScore" data-where="28 D Ph.D awarded score" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>API score — D(ii), thesis submitted (7 / candidate)<input data-api-field="c3.guidance.phdSubmittedScore" data-where="28 D Ph.D thesis submitted score" type="number" min="0" step="0.01" inputmode="decimal"></label>
+          </div>
+          <div class="section-heading"><div><h4>E(i) Training courses, FDPs, refresher / orientation (max 30)</h4></div><button type="button" class="secondary" data-api-add="c3.training">+ Add Programme</button></div>
+          <div id="list-c3-training" class="repeatable"></div>
+          <div class="score-box">E(i) total: <strong data-sum="p28.e1Total" data-max="30" data-where="28 E(i) total"></strong></div>
+          <div class="section-heading"><div><h4>E(ii) Papers presented in conferences, seminars, workshops, symposia</h4></div><button type="button" class="secondary" data-api-add="c3.papers">+ Add Paper</button></div>
+          <div id="list-c3-papers" class="repeatable"></div>
+          <div class="section-heading"><div><h4>E(iii) Invited lectures and chairmanships</h4></div><button type="button" class="secondary" data-api-add="c3.lectures">+ Add Lecture</button></div>
+          <div id="list-c3-lectures" class="repeatable"></div>
+          <div class="score-box">Category III total: <strong data-sum="p44.total"></strong></div>
+        </div>
+
+        <div class="card">
+          <h3>Problems to fix before the ACR can be generated</h3>
+          <ul id="apiProblems" class="problems"></ul>
         </div>
         <div class="card">
-          <h3>27. Category II — Co-curricular / Extension / Professional Development</h3>
-          <div class="grid two">
-            <label>Extension / co-curricular / field score<input name="apiC2Extension" type="number" min="0" max="20" step="0.01" readonly></label>
-            <label>Corporate life / management score<input name="apiC2Management" type="number" min="0" max="15" step="0.01"></label>
-            <label>Professional development score<input name="apiC2Professional" type="number" min="0" max="15" step="0.01"></label>
-          </div>
-          <div class="score-box">Category II raw total: <strong id="cat2Raw">0.00 / 50</strong> · reportable total: <strong id="cat2Total">0.00 / 25</strong></div>
-        </div>
-        <div class="card">
-          <h3>28. Category III — Research, Publications & Academic Contributions</h3>
-          <p class="muted">Repeatable Category III tables will be added in the next build. For now, keep the calculated/verified API input here so no data is lost.</p>
-          <label>Category III self-assessment score (calculated from entered research records)<input name="apiC3" type="number" min="0" step="0.01" readonly></label>
-        </div>
-        <div class="card">
-          <h3>29. Summary of API Scores</h3>
-          <div class="summary-grid">
-            <div><span>Category I</span><strong id="summary1">0.00</strong></div>
-            <div><span>Category II</span><strong id="summary2">0.00</strong></div>
-            <div><span>Total I + II</span><strong id="summary12">0.00</strong></div>
-            <div><span>Category III</span><strong id="summary3">0.00</strong></div>
-          </div>
+          <h3>Preview — how the scores will print (points 29, 42, 43, 44)</h3>
+          <p class="muted">Only the teacher's self-appraisal columns are filled. The Principal's columns stay blank.</p>
+          <div id="apiPreview" class="table-scroll"></div>
         </div>
       </section>
 
