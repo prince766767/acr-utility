@@ -25,7 +25,7 @@
     <section class="toolbar card">
       <div class="toolbar-row">
         <label>ACR Session
-          <input id="session" placeholder="2026-27" autocomplete="off">
+          <input id="session" placeholder="2026-27" autocomplete="off" list="sessionList"><datalist id="sessionList"></datalist>
         </label>
         <label>Last saved
           <input id="lastSaved" value="Not saved yet" disabled>
@@ -249,6 +249,20 @@
           <div class="score-box">Category III total: <strong data-sum="p44.total"></strong></div>
         </div>
 
+        <div class="card">
+          <h3>Last academic year (points 29 and 45, column 3)</h3>
+          <p id="lyNote" class="muted"></p>
+          <div class="grid two">
+            <label>I — Teaching, learning and evaluation (max 125)<input id="ly-cat1" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>II — Co-curricular, extension, professional development (max 25)<input id="ly-cat2" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>III — Research and academic contribution<input id="ly-cat3" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <div class="score-box">Total I + II: <strong id="ly-total12">—</strong></div>
+          </div>
+          <ul id="lyProblems" class="problems"></ul>
+          <label id="lyImportWrap" class="file-button secondary hidden">Import last year's file
+            <input id="lyImport" type="file" accept="application/json,.json" hidden>
+          </label>
+        </div>
         <div class="card">
           <h3>Problems to fix before the ACR can be generated</h3>
           <ul id="apiProblems" class="problems"></ul>

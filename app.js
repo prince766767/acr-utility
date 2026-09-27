@@ -2,11 +2,20 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import firebaseConfig from './firebase-config.js';
-import { tally, normalizeApi, emptyApi } from './api_tally.js';
+import { tally, normalizeApi, emptyApi, lastYearProblems, lastYearCells } from './api_tally.js';
 import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
 import { parseDob, dobWords, fieldProblems, migrateDraft } from './acr_fields.js';
+import * as sessions from './sessions.js';
+import { initLastYearUi, renderLastYear } from './last_year_ui.js';
 
-const LOCAL_KEY='acrUtilityDraftV01';
+// Browser storage, wrapped so that a storage error never loses what is on screen.
+function safeStore(){
+  let ls=null; try{ls=window.localStorage;}catch(err){console.error(err);}
+  const fail=err=>{console.error(err);const s=document.getElementById('syncStatus');if(s)s.textContent="This browser's storage could not be used; your entries stay on screen but are not saved. Use Export Draft to keep a copy.";};
+  const guard=(fn,fallback)=>{try{return ls?fn():fallback;}catch(err){fail(err);return fallback;}};
+  return {get length(){return guard(()=>ls.length,0);},key:i=>guard(()=>ls.key(i),null),getItem:k=>guard(()=>ls.getItem(k),null),setItem:(k,v)=>guard(()=>ls.setItem(k,v)),removeItem:k=>guard(()=>ls.removeItem(k))};
+}
+const store=safeStore();
 const state={session:'', profile:{}, part1:{}, part2:{}, teaching:[], assignments:[], results:[], activities:[], orientation:[], research:[], otherInfo:[], api:emptyApi(), enclosures:[], ui:{section:'profile'}};
 let auth=null, db=null, firebaseReady=false, currentUser=null;
 
@@ -23,7 +32,7 @@ const enclosureDefaults=['Certificate / sanction order','FDP / Orientation / Ref
 
 function deepAssign(obj,path,value){let p=obj;for(let i=0;i<path.length-1;i++){p=p[path[i]]??={};}p[path[path.length-1]]=value;}
 function collectSimple(){
-  const data={session:$('session').value.trim(), profile:{}, part1:{}, part2:{}, api:state.api, ui:state.ui, enclosures:state.enclosures, teaching:state.teaching, assignments:state.assignments, results:state.results, activities:state.activities, orientation:state.orientation, research:state.research, otherInfo:state.otherInfo};
+  const data={session:state.session, profile:{}, part1:{}, part2:{}, api:state.api, ui:state.ui, enclosures:state.enclosures, teaching:state.teaching, assignments:state.assignments, results:state.results, activities:state.activities, orientation:state.orientation, research:state.research, otherInfo:state.otherInfo};
   form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{
     const n=el.name; const value=el.type==='number' ? (el.value===''?'':Number(el.value)) : el.value;
     if(['collegeName','collegeDistrict','collegePin','principalName','collegeAddress','collegeOther','title','relation','fullName','fatherHusband','employeeCode','subject','appointmentDate','designation','payBand','basicPay','promotionDate','academicQualification','professionalQualification','researchDegree','dob','serviceStatus','landline','mobile','email','submissionDate','permanentAddress'].includes(n)) data.profile[n]=value;
@@ -37,16 +46,39 @@ function applySimple(raw){
   $('session').value=data.session||'';
   const merged={...(data.profile||{}),...(data.part1||{}),...(data.part2||{})};
   const {api:apiData,legacy}=normalizeApi(data.api);
-  form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{ if(Object.prototype.hasOwnProperty.call(merged,el.name)) el.value=merged[el.name] ?? ''; });
+  form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{
+    // Every field is set from the record; one it does not have is reset, so nothing carries over from the record shown before.
+    if(Object.prototype.hasOwnProperty.call(merged,el.name)) el.value=merged[el.name] ?? '';
+    else if(el.tagName==='SELECT') el.selectedIndex=0;
+    else el.value='';
+  });
   state.session=data.session||''; state.profile=data.profile||{}; state.part1=data.part1||{}; state.part2=data.part2||{}; state.api=apiData; state.teaching=data.teaching||[]; state.assignments=data.assignments||[]; state.results=data.results||[]; state.activities=data.activities; state.orientation=data.orientation; state.research=data.research; state.otherInfo=data.otherInfo; state.enclosures=data.enclosures||[]; state.ui=data.ui||{section:'profile'};
   renderRepeatables(); renderEnclosures(); renderApiLists(); showLegacyNotice(legacy); showPartNotice(notices); updateDobWords(); updateScores(); switchSection(state.ui.section||'profile');
 }
-function saveLocal(){const data=collectSimple(); data.savedAt=new Date().toISOString(); localStorage.setItem(LOCAL_KEY,JSON.stringify(data)); $('lastSaved').value=new Date(data.savedAt).toLocaleString(); updateProgress(); return data;}
-function loadLocal(){const raw=localStorage.getItem(LOCAL_KEY); if(!raw) return; try{const data=JSON.parse(raw); applySimple(data); if(data.savedAt) $('lastSaved').value=new Date(data.savedAt).toLocaleString();}catch(err){console.error(err)}}
+function saveLocal(){const data=collectSimple(); data.savedAt=new Date().toISOString(); sessions.writeRecord(store,data); $('lastSaved').value=new Date(data.savedAt).toLocaleString(); updateProgress(); return data;}
+function loadLocal(){const notices=sessions.migrate(store); const rec=sessions.loadCurrent(store); if(rec){applySimple(rec); if(rec.savedAt) $('lastSaved').value=new Date(rec.savedAt).toLocaleString();} resolveLastYear(); refreshSessionList(); if(notices.length) $('syncStatus').textContent=notices.join(' ');}
+function refreshSessionList(){const dl=$('sessionList'); dl.innerHTML=''; for(const s of sessions.listSessions(store)){const o=document.createElement('option'); o.value=s; dl.appendChild(o);}}
+function openSession(session){const rec=sessions.readRecord(store,session)||sessions.newRecordFrom({},session); applySimple(rec); store.setItem(sessions.CURRENT_KEY,session); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList(); renderReview();}
+function resolveLastYear(){
+  const info=sessions.lastYear(store,state.session);
+  const ly=state.api.lastAcademicYear&&typeof state.api.lastAcademicYear==='object'?state.api.lastAcademicYear:{};
+  if(info.state==='record') state.api.lastAcademicYear={...info.values,source:'record',from:info.from};
+  else if(info.state!=='none'||ly.source==='record') state.api.lastAcademicYear={cat1:'',cat2:'',total12:'',cat3:'',source:info.state==='none'?'typed':'',from:''};
+  else state.api.lastAcademicYear=ly;  // no previous record: keep the typed figures (or none yet)
+  renderLastYear(info,state.api.lastAcademicYear);
+  return info;
+}
+async function importLastYearFile(file){
+  let rec=null; try{rec=JSON.parse(await file.text());}catch(err){console.error(err);}
+  if(!rec||typeof rec!=='object'){renderLastYear({state:'none',message:'This is not an ACR file.',problems:[]},state.api.lastAcademicYear||{});return;}
+  const res=sessions.checkLastYearFile(rec,state.session);
+  if(!res.ok){renderLastYear({state:'none',message:res.message,problems:res.problems||[]},state.api.lastAcademicYear||{});return;}
+  sessions.saveRecord(store,rec); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList();
+}
 async function saveCloud(){ if(!firebaseReady||!currentUser) return; const data=saveLocal(); await setDoc(doc(db,'users',currentUser.uid,'acrs',data.session||'default'),{...data,updatedAt:serverTimestamp()},{merge:true}); $('syncStatus').textContent='Saved locally and synced to Google/Firebase.'; }
 async function loadCloud(){ if(!firebaseReady||!currentUser) return; const session=$('session').value.trim(); if(!session) return; const snap=await getDoc(doc(db,'users',currentUser.uid,'acrs',session)); if(snap.exists()){applySimple(snap.data()); $('syncStatus').textContent='Cloud draft loaded.'; }}
 
-function switchSection(id){document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));state.ui.section=id; saveLocal(); renderReview();}
+function switchSection(id){document.querySelectorAll('.section').forEach(s=>s.classList.toggle('active',s.id===id));document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.section===id));state.ui.section=id; if(id==='api'){resolveLastYear(); updateScores();} saveLocal(); renderReview();}
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>switchSection(b.dataset.section)));
 
 // Single source of truth for each repeatable collection's container/template
@@ -96,7 +128,7 @@ function renderEnclosures(){
 }
 $('addEnclosureBtn').addEventListener('click',()=>{const v=$('customEnclosure').value.trim();if(!v)return;state.enclosures.push({label:v,checked:true,custom:true});$('customEnclosure').value='';renderEnclosures();saveLocal();updateProgress();});
 
-function updateScores(){const result=tally(state.api);renderApiValues(result);return result;}
+function updateScores(){const result=tally(state.api);renderApiValues(result,lastYearCells(state.api.lastAcademicYear));return result;}
 function showLegacyNotice(legacy){
   const el=$('apiLegacyNotice');
   if(!legacy.length){el.classList.add('hidden');el.textContent='';return;}
@@ -117,7 +149,8 @@ function updateDobWords(){
 }
 function renderFieldProblems(d){
   const ul=$('reviewProblems'); ul.innerHTML='';
-  const probs=[...fieldProblems(d),...tally(d.api).problems];
+  const probs=[...fieldProblems(d),...tally(d.api).problems,...lastYearProblems(d.api.lastAcademicYear)];
+  if(!lastYearCells(d.api.lastAcademicYear).cat1&&!lastYearProblems(d.api.lastAcademicYear).length){const w=document.createElement('li');w.className='warn';w.textContent='Last academic year figures are not filled in.';ul.appendChild(w);}
   if(!probs.length){const li=document.createElement('li');li.className='ok';li.textContent='No problems. The ACR can be generated.';ul.appendChild(li);return;}
   for(const p of probs){const li=document.createElement('li');li.textContent=p.message;ul.appendChild(li);}
 }
@@ -125,7 +158,29 @@ form.addEventListener('input',()=>{updateScores();updateDobWords();saveLocal();}
 form.addEventListener('change',()=>{updateScores();saveLocal();});
 $('saveBtn').addEventListener('click',async()=>{try{if(firebaseReady&&currentUser)await saveCloud();else{saveLocal();$('syncStatus').textContent='Draft saved locally.';}}catch(err){console.error(err);$('syncStatus').textContent='Saved locally; cloud sync failed, so no work was lost.';}});
 $('exportBtn').addEventListener('click',()=>{const data=saveLocal();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`ACR_${data.session||'draft'}.acr.json`;a.click();URL.revokeObjectURL(a.href);});
-$('importInput').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());applySimple(data);saveLocal();}catch(err){alert('Invalid ACR draft file.');console.error(err);}});
+$('importInput').addEventListener('change',async e=>{
+  const file=e.target.files[0]; e.target.value=''; if(!file) return;
+  let rec=null; try{rec=JSON.parse(await file.text());}catch(err){console.error(err);}
+  if(!rec||typeof rec!=='object'){alert('Invalid ACR draft file.');return;}
+  const s=sessions.isSession(rec.session)?rec.session:'';
+  const exists=s?sessions.hasRecord(store,s):store.getItem(sessions.DRAFT_KEY)!==null;
+  if(exists&&!confirm(s?`Replace the saved ${s} record with this file?`:'Replace the unnamed draft with this file?')) return;
+  saveLocal(); rec.session=s; sessions.saveRecord(store,rec);
+  if(s) openSession(s); else {applySimple(rec); store.setItem(sessions.CURRENT_KEY,''); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList();}
+  $('syncStatus').textContent=s?`Imported the ${s} record.`:'Imported as the unnamed draft.';
+});
+$('session').addEventListener('change',()=>{
+  const box=$('session'), status=$('syncStatus'), target=box.value.trim();
+  const action=sessions.decideSwitch(state.session,target,sessions.hasRecord(store,target));
+  if(action==='same'){box.value=state.session;return;}
+  if(action==='invalid'){status.textContent='Session must look like 2025-26.';box.value=state.session;return;}
+  if(action==='name-draft'){state.session=target; resolveLastYear(); updateScores(); saveLocal(); store.removeItem(sessions.DRAFT_KEY); refreshSessionList(); status.textContent=`This draft is now the ${target} record.`;return;}
+  if(action==='ask-open-existing'&&!confirm(`A ${target} record already exists. Open it? (your unnamed draft is kept as the unnamed draft)`)){box.value=state.session;return;}
+  saveLocal();
+  if(action==='new'){sessions.saveRecord(store,sessions.newRecordFrom(collectSimple(),target)); status.textContent=`Started the ${target} record (profile copied; annual parts empty).`;}
+  else status.textContent=`Opened the ${target} record.`;
+  openSession(target);
+});
 
 function updateProgress(){const d=collectSimple();let done=0,total=0;const must=[['fullName','Profile'],['employeeCode','Profile'],['subject','Profile'],['designation','Profile'],['p17','17'],['p18','18'],['p19b','19b'],['p21i','21i'],['p25','25']];must.forEach(([k])=>{total++; const v=d.profile[k]??d.part2[k]; if(String(v||'').trim())done++;}); total+=4; if(d.teaching.length)done++; if(d.assignments.length)done++; if(d.results.length)done++; if(d.enclosures.some(x=>x.checked))done++; const pct=Math.round(done/total*100);$('progressBar').style.width=`${pct}%`;$('progressText').textContent=`${pct}%`;}
 function renderReview(){const d=collectSimple();renderFieldProblems(d);const items=[['Session',d.session||'Not set'],['Employee',d.profile.fullName||'Not set'],['Employee Code',d.profile.employeeCode||'Not set'],['Teaching rows',d.teaching.length],['Exam result rows',d.results.length],['Selected enclosures',d.enclosures.filter(x=>x.checked).length],...apiReviewItems(d.api)];const box=$('reviewList');box.innerHTML='';items.forEach(([a,b])=>{const x=document.createElement('div');x.className='review-item';x.innerHTML=`<span>${escapeHtml(String(a))}</span><strong>${escapeHtml(String(b))}</strong>`;box.appendChild(x);});}
@@ -135,4 +190,5 @@ if(firebaseReady){$('signInBtn').addEventListener('click',async()=>{const provid
 
 if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
 initApiUi({getApi:()=>state.api,onChange:()=>{updateScores();saveLocal();}});
+initLastYearUi({getLy:()=>state.api.lastAcademicYear||{},setLy:v=>{state.api.lastAcademicYear=v;},onChange:()=>{resolveLastYear();updateScores();saveLocal();},onImport:importLastYearFile});
 renderApiLists();loadLocal();renderRepeatables();renderEnclosures();updateScores();updateProgress();renderReview();

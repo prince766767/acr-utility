@@ -1,4 +1,4 @@
-// Entry tables for points 26-28 and the live preview of points 29, 42, 43 and 44.
+// Entry tables for points 26-28 and the live preview of points 29, 42, 43, 44 and 45.
 // Every value typed here is stored as typed in state.api; api_tally.js does all the arithmetic.
 import { ROW_CHOICES, ROW_LABELS, C3_WHERE, P44_ORDER } from './api_tally.js';
 
@@ -119,14 +119,14 @@ function table(title, head, rows, valCol) {
   return `<h4>${esc(title)}</h4><table class="preview-table"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
-function previewHtml(v) {
+function previewHtml(v, ly) {
   const blank = ['', '', ''];
   return [
     table('29. Summary of API scores', ['', 'Criteria', 'Last academic year', 'Total API score for assessment period'], [
-      ['I', 'Teaching, learning and evaluation related activities', '', v.p29.I],
-      ['II', 'Co-curricular, extension, professional development etc.', '', v.p29.II],
-      ['', 'Total I + II', '', v.p29.I_II],
-      ['III', 'Research and academic contribution', '', v.p29.III],
+      ['I', 'Teaching, learning and evaluation related activities', ly.cat1, v.p29.I],
+      ['II', 'Co-curricular, extension, professional development etc.', ly.cat2, v.p29.II],
+      ['', 'Total I + II', ly.total12, v.p29.I_II],
+      ['III', 'Research and academic contribution', ly.cat3, v.p29.III],
     ], 3),
     table('42. Category I', ['Serial', 'Criteria', 'Max.', 'API score reported in self appraisal', ...PRINCIPAL], [
       ['(i) a', 'Classes taken', '50', v.p42.i_a, ...blank],
@@ -146,10 +146,16 @@ function previewHtml(v) {
       ...P44_ORDER.map(code => [SERIAL[code], ROW_LABELS[code], v.p44[code], ...blank]),
       ['', 'Total', v.p44.total, ...blank],
     ], 2),
+    table('45. Summary of API scores by Principal', ['', 'Criteria', 'Last academic year', 'Reported in self appraisal', "Principal's total"], [
+      ['I', 'Teaching, learning and evaluation related activities', ly.cat1, v.p29.I, ''],
+      ['II', 'Co-curricular, extension, professional development etc.', ly.cat2, v.p29.II, ''],
+      ['', 'Total I + II', ly.total12, v.p29.I_II, ''],
+      ['III', 'Research and academic contribution', ly.cat3, v.p29.III, ''],
+    ], 3),
   ].join('');
 }
 
-export function renderApiValues({ values, problems }) {
+export function renderApiValues({ values, problems }, ly = { cat1: '', cat2: '', total12: '', cat3: '' }) {
   document.querySelectorAll('[data-sum]').forEach(el => {
     const val = pick(values, el.dataset.sum);
     el.textContent = el.dataset.max ? `${val} / ${el.dataset.max}` : val;
@@ -171,5 +177,5 @@ export function renderApiValues({ values, problems }) {
     li.textContent = p.message;
     ul.appendChild(li);
   }
-  document.getElementById('apiPreview').innerHTML = previewHtml(values);
+  document.getElementById('apiPreview').innerHTML = previewHtml(values, ly);
 }
