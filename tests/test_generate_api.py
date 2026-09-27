@@ -119,6 +119,11 @@ class GenerateApi(unittest.TestCase):
         self.assertEqual(place({'collegeName': 'Govt. College X'}), 'Place: Govt. College XSignature of the reported on officer')
         self.assertEqual(place({'collegeName': 'Govt. College X', 'collegePin': '171009'}), 'Place: Govt. College X, 171009Signature of the reported on officer')
 
+    def test_generator_adds_no_pages(self):
+        blip = '{http://schemas.openxmlformats.org/drawingml/2006/main}blip'
+        count = lambda d: len(list(d.element.body.iter(blip)))
+        self.assertEqual(count(self.doc), count(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')))
+
     def test_problems_block_generation(self):
         out = self.tmp / 'blocked.docx'
         with self.assertRaises(generate_acr.ApiProblemsError) as ctx:

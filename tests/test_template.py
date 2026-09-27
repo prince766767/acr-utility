@@ -198,5 +198,16 @@ class TemplateTokens(unittest.TestCase):
             self.assertEqual(spans(tr), spans(trs[2]))
 
 
+class TemplateAppendixPages(unittest.TestCase):
+    def test_ends_with_three_full_page_images(self):
+        from docx.oxml.ns import qn
+        doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+        paras = [el for el in doc.element.body if el.tag == qn('w:p')]
+        blip = '{http://schemas.openxmlformats.org/drawingml/2006/main}blip'
+        # each page is a section-break paragraph followed by the picture paragraph
+        self.assertEqual([len(list(p.iter(blip))) for p in paras[-6:]], [0, 1, 0, 1, 0, 1])
+        self.assertAlmostEqual(doc.sections[-1].page_width.inches, 8.27, places=2)
+        self.assertEqual(doc.sections[-1].left_margin, 0)
+
 if __name__ == '__main__':
     unittest.main()

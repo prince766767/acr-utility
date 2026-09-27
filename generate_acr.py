@@ -273,34 +273,6 @@ def replace_tokens(docx_path, out_path, values):
         for n,b in files.items(): zout.writestr(n,b)
 
 
-def add_page_break_image(doc,path):
-    sec=doc.add_section(WD_SECTION.NEW_PAGE)
-    sec.page_width=Inches(8.27); sec.page_height=Inches(11.69)
-    sec.top_margin=Inches(0); sec.bottom_margin=Inches(0); sec.left_margin=Inches(0); sec.right_margin=Inches(0)
-    p=doc.add_paragraph(); p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_before=Pt(0); p.paragraph_format.space_after=Pt(0)
-    p.add_run().add_picture(str(path),width=Inches(8.27),height=Inches(11.69))
-
-
-def prepare_appendix_images():
-    APPENDIX_DIR.mkdir(exist_ok=True)
-    if all((APPENDIX_DIR/f'page-{n}.png').exists() for n in (28,29,30)): return
-    src=HERE/'UGC_ACR_Form.pdf'
-    out=HERE/'_pdf_render'
-    subprocess.run(['python','/home/oai/skills/pdfs/scripts/render_pdf.py',str(src),'--out_dir',str(out),'--dpi','144'],check=True)
-    from PIL import Image, ImageDraw, ImageFont
-    font_path='/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf'
-    font=ImageFont.truetype(font_path,26)
-    for n in (28,29,30):
-        im=Image.open(out/f'page-{n}.png').convert('RGB')
-        w,h=im.size
-        # Mask original page number and put sequential ACR page number 28/29/30.
-        ImageDraw.Draw(im).rectangle([int(w*0.90),int(h*0.935),w,int(h*0.995)],fill='white')
-        d=ImageDraw.Draw(im); txt=str(n); bbox=d.textbbox((0,0),txt,font=font); tw=bbox[2]-bbox[0]; th=bbox[3]-bbox[1]
-        d.text((w-int(w*0.07)-tw,h-int(h*0.045)-th),txt,font=font,fill='black')
-        im.save(APPENDIX_DIR/f'page-{n}.png')
-
-
 def fill_part_tables(doc, t):
     """Point 10 digit boxes and the tables of points 19(a), 19(c), 19(d), 20, 21(ii), 22 and 30."""
     T = doc.tables
@@ -345,7 +317,6 @@ def generate(data,out_docx):
         raise ProblemsError(problems)
     v=result['values']
     profile=data.get('profile') if isinstance(data.get('profile'),dict) else {}
-    prepare_appendix_images()
     doc=Document(TEMPLATE)
     fill_part_tables(doc,part_tables(data))
     strike_unchosen(doc,'Appraisal of work and conduct',TITLES,profile.get('title'))
@@ -369,8 +340,6 @@ def generate(data,out_docx):
             for idx,label in enumerate(selected,1):
                 np=insert_at.insert_paragraph_before(f'☑ {idx}. {label}')
                 for r in np.runs: r.font.color.rgb=BLUE
-    # Append the three official instruction pages to reach the 30-page source format.
-    for n in (28,29,30): add_page_break_image(doc, APPENDIX_DIR/f'page-{n}.png')
     doc.save(out_docx)
     return v
 
