@@ -1,0 +1,150 @@
+[
+  {
+    "name": "worked example from spec section 7",
+    "api": {
+      "c1": {
+        "classes": 45, "excess": 6, "resourcesScore": 18.5,
+        "resources": [{"course": "B.A. I Economics", "consulted": "Text book", "prescribed": "Yes", "additional": "Notes"}],
+        "innovative": [{"description": "Flipped class", "score": 8}, {"description": "Case studies", "score": 7.25}],
+        "exam": [{"type": "Invigilation", "assigned": "20", "extent": "100", "score": 10},
+                 {"type": "Evaluation", "assigned": "300 scripts", "extent": "100", "score": 12}]
+      },
+      "c2": {
+        "extension": [{"activity": "NSS", "hours": "2", "score": 10}, {"activity": "Cultural", "hours": "1", "score": 5}],
+        "management": [{"activity": "Admission committee", "responsibility": "Yearly", "score": 7.5},
+                       {"activity": "Timetable", "responsibility": "Semester", "score": 5}],
+        "professional": [{"activity": "Seminar organised", "details": "one-day", "score": 3}]
+      },
+      "c3": {
+        "journals": [{"title": "P1", "row": "A1", "score": 15}, {"title": "P2", "row": "A1", "score": 7.5}, {"title": "P3", "row": "A2", "score": 10}],
+        "chapters": [{"title": "Ch1", "row": "B1a", "score": 10}, {"title": "Ch2", "row": "B1b", "score": 5}, {"title": "Ch3", "row": "B1b", "score": 2.5}],
+        "proceedings": [{"title": "CP1", "score": 10}],
+        "books": [{"title": "Book1", "row": "B3b", "score": 25}],
+        "ongoing": [{"title": "Minor project", "row": "C1c", "score": 10}, {"title": "Consultancy", "row": "C2", "score": 10}],
+        "completed": [{"title": "Completed minor", "row": "C3", "score": 10}],
+        "guidance": {"mphilScore": 3, "phdAwardedScore": 10, "phdSubmittedScore": 7},
+        "training": [{"programme": "Refresher", "row": "E1a", "score": 20}, {"programme": "FDP", "row": "E1b", "score": 10}],
+        "papers": [{"title": "T1", "row": "E2b", "score": 7.5}, {"title": "T2", "row": "E2b", "score": 7.5},
+                   {"title": "T3", "row": "E2c", "score": 5}, {"title": "T4", "row": "E2d", "score": 3}],
+        "lectures": [{"title": "L1", "row": "E3b", "score": 5}]
+      }
+    },
+    "values": {
+      "p42": {"i_a": "45", "i_b": "6", "ii": "18.5", "iii": "15.25", "iv": "22", "total": "106.75"},
+      "p43": {"i": "15", "ii": "12.5", "iii": "3", "total": "25", "raw": "30.5", "capped": true},
+      "p44": {"A1": "22.5", "A2": "10", "B1a": "10", "B1b": "7.5", "B2": "10", "B3a": "", "B3b": "25", "B3c": "",
+              "C1a": "", "C1b": "", "C1c": "10", "C2": "10", "C3": "10", "C4": "",
+              "D1": "3", "D2a": "10", "D2b": "7", "E1a": "20", "E1b": "10",
+              "E2a": "", "E2b": "15", "E2c": "5", "E2d": "3", "E3a": "", "E3b": "5", "total": "193"},
+      "p29": {"I": "106.75", "II": "25", "I_II": "131.75", "III": "193"},
+      "p28": {"phd": "17", "e1Total": "30"}
+    },
+    "problems": []
+  },
+  {
+    "name": "empty record",
+    "api": {},
+    "values": {
+      "p42": {"i_a": "", "i_b": "", "ii": "", "iii": "0", "iv": "0", "total": "0"},
+      "p43": {"i": "0", "ii": "0", "iii": "0", "total": "0", "raw": "0", "capped": false},
+      "p44": {"A1": "", "A2": "", "B1a": "", "B1b": "", "B2": "", "B3a": "", "B3b": "", "B3c": "",
+              "C1a": "", "C1b": "", "C1c": "", "C2": "", "C3": "", "C4": "",
+              "D1": "", "D2a": "", "D2b": "", "E1a": "", "E1b": "",
+              "E2a": "", "E2b": "", "E2c": "", "E2d": "", "E3a": "", "E3b": "", "total": "0"},
+      "p29": {"I": "0", "II": "0", "I_II": "0", "III": "0"},
+      "p28": {"phd": "", "e1Total": "0"}
+    },
+    "problems": []
+  },
+  {
+    "name": "every maximum exactly reached passes",
+    "api": {
+      "c1": {"classes": 50, "excess": 10, "resourcesScore": 20,
+             "innovative": [{"description": "x", "score": 20}], "exam": [{"type": "x", "score": 25}]},
+      "c2": {"extension": [{"activity": "x", "score": 20}], "management": [{"activity": "x", "score": 15}],
+             "professional": [{"activity": "x", "score": 15}]},
+      "c3": {"training": [{"programme": "x", "row": "E1a", "score": 20}, {"programme": "y", "row": "E1b", "score": 10}]}
+    },
+    "checks": {"p42.total": "125", "p43.total": "25", "p43.raw": "50", "p43.capped": true, "p29.I_II": "150", "p28.e1Total": "30"},
+    "problems": []
+  },
+  {
+    "name": "every maximum exceeded by 0.01 blocks",
+    "api": {
+      "c1": {"classes": 50.01, "excess": 10.01, "resourcesScore": 20.01,
+             "innovative": [{"description": "x", "score": 20.01}], "exam": [{"type": "x", "score": 25.01}]},
+      "c2": {"extension": [{"activity": "x", "score": 20.01}], "management": [{"activity": "x", "score": 15.01}],
+             "professional": [{"activity": "x", "score": 15.01}]},
+      "c3": {"training": [{"programme": "x", "row": "E1a", "score": 20}, {"programme": "y", "row": "E1b", "score": 10.01}]}
+    },
+    "checks": {"p42.total": "125.05", "p43.raw": "50.03", "p43.total": "25"},
+    "problems": [
+      {"code": "OVER_MAX", "where": "26(i)(a)", "message": "26(i)(a) is 50.01; the form's maximum is 50."},
+      {"code": "OVER_MAX", "where": "26(i)(b)", "message": "26(i)(b) is 10.01; the form's maximum is 10."},
+      {"code": "OVER_MAX", "where": "26(ii)", "message": "26(ii) is 20.01; the form's maximum is 20."},
+      {"code": "OVER_MAX", "where": "26(iii) total", "message": "26(iii) total is 20.01; the form's maximum is 20."},
+      {"code": "OVER_MAX", "where": "26(iv) total", "message": "26(iv) total is 25.01; the form's maximum is 25."},
+      {"code": "OVER_MAX", "where": "Category I total", "message": "Category I total is 125.05; the form's maximum is 125."},
+      {"code": "OVER_MAX", "where": "27(i) total", "message": "27(i) total is 20.01; the form's maximum is 20."},
+      {"code": "OVER_MAX", "where": "27(ii) total", "message": "27(ii) total is 15.01; the form's maximum is 15."},
+      {"code": "OVER_MAX", "where": "27(iii) total", "message": "27(iii) total is 15.01; the form's maximum is 15."},
+      {"code": "OVER_MAX", "where": "28 E(i) total", "message": "28 E(i) total is 30.01; the form's maximum is 30."}
+    ]
+  },
+  {
+    "name": "category II exactly 25 is not capped",
+    "api": {"c2": {"extension": [{"activity": "x", "score": 10}], "management": [{"activity": "x", "score": 10}],
+                   "professional": [{"activity": "x", "score": 5}]}},
+    "checks": {"p43.total": "25", "p43.raw": "25", "p43.capped": false, "p29.II": "25"},
+    "problems": []
+  },
+  {
+    "name": "decimals add exactly and string scores are accepted",
+    "api": {"c3": {"journals": [{"title": "a", "row": "A1", "score": 0.1}, {"title": "b", "row": "A1", "score": 0.2}],
+                   "chapters": [{"title": "c", "row": "B1b", "score": " 2.5 "}]}},
+    "checks": {"p44.A1": "0.3", "p44.B1b": "2.5", "p29.III": "2.8"},
+    "problems": []
+  },
+  {
+    "name": "entry problems",
+    "api": {
+      "c1": {"classes": "abc", "exam": [{"type": "x"}]},
+      "c3": {"journals": [
+        {"title": "a", "score": 15},
+        {"title": "b", "row": "A1"},
+        {"title": "c", "row": "A1", "score": -5},
+        {"title": "d", "row": "A1", "score": 7.125},
+        {"title": "", "row": "", "score": ""},
+        {"title": "e", "row": "Z9", "score": 10}
+      ]}
+    },
+    "checks": {"p42.i_a": "", "p44.A1": "", "p29.III": "0"},
+    "problems": [
+      {"code": "BAD_SCORE", "where": "26(i)(a)", "message": "26(i)(a): score must be a number (0 or more) with at most 2 decimals."},
+      {"code": "NO_SCORE", "where": "26(iv), entry 1", "message": "26(iv), entry 1: score is missing."},
+      {"code": "NO_ROW", "where": "28 A, entry 1", "message": "28 A, entry 1: choose the point-44 row."},
+      {"code": "NO_SCORE", "where": "28 A, entry 2", "message": "28 A, entry 2: score is missing."},
+      {"code": "BAD_SCORE", "where": "28 A, entry 3", "message": "28 A, entry 3: score must be a number (0 or more) with at most 2 decimals."},
+      {"code": "BAD_SCORE", "where": "28 A, entry 4", "message": "28 A, entry 4: score must be a number (0 or more) with at most 2 decimals."},
+      {"code": "BAD_ROW", "where": "28 A, entry 6", "message": "28 A, entry 6: \"Z9\" is not a valid point-44 row for this table."}
+    ]
+  },
+  {
+    "name": "single-row table ignores any row value",
+    "api": {"c3": {"proceedings": [{"title": "p", "row": "A1", "score": 10}]}},
+    "checks": {"p44.B2": "10", "p44.A1": "", "p29.III": "10"},
+    "problems": []
+  },
+  {
+    "name": "only Ph.D thesis submitted",
+    "api": {"c3": {"guidance": {"phdSubmittedScore": 7}}},
+    "checks": {"p44.D2a": "", "p44.D2b": "7", "p28.phd": "7", "p29.III": "7"},
+    "problems": []
+  },
+  {
+    "name": "a zero score still fills its cell",
+    "api": {"c3": {"papers": [{"title": "x", "row": "E2a", "score": 0}]}},
+    "checks": {"p44.E2a": "0", "p44.total": "0"},
+    "problems": []
+  }
+]
