@@ -17,6 +17,9 @@ class Template27iii(unittest.TestCase):
         self.assertEqual(col1[12], 'Total (Max.15)')
         self.assertTrue(col1[13].startswith('Total Score (I+II+III)'))
         self.assertNotIn('Chaired', ' '.join(col1))
+        heading = [(r.font.color.rgb, r.bold) for r in t.rows[9].cells[1].paragraphs[0].runs[:2]]
+        reference = [(r.font.color.rgb, r.bold) for r in t.rows[5].cells[1].paragraphs[0].runs[:2]]
+        self.assertEqual(heading, reference)
 
     def test_entry_rows_have_no_merged_cells(self):
         # Every entry row of the point 26-28 tables needs its own cells, or one score overwrites another.

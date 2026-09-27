@@ -1,0 +1,253 @@
+{
+  "session": "2025-26",
+  "profile": {
+    "collegeName": "",
+    "collegeDistrict": "",
+    "collegePin": "",
+    "principalName": "",
+    "collegeAddress": "",
+    "collegeOther": "",
+    "fullName": "",
+    "fatherHusband": "",
+    "employeeCode": "",
+    "subject": "",
+    "appointmentDate": "",
+    "designation": "",
+    "payBand": "",
+    "basicPay": "",
+    "promotionDate": "",
+    "academicQualification": "",
+    "professionalQualification": "",
+    "researchDegree": "",
+    "dob": "",
+    "serviceStatus": "Permanent",
+    "mobile": "",
+    "email": "",
+    "permanentAddress": ""
+  },
+  "part1": {},
+  "part2": {
+    "p8": "",
+    "p12": "",
+    "p13a": "",
+    "p13b": "",
+    "p14": "",
+    "p17": "",
+    "p18": "",
+    "p19b": "",
+    "p19d": "",
+    "p19f": "",
+    "p19g": "",
+    "totalPeriodsPerWeek": "",
+    "p21i": "",
+    "p21ii": "",
+    "researchYesNo": "Yes",
+    "researchTitle": "",
+    "researchInstitution": "",
+    "researchNature": "",
+    "researchStatus": "",
+    "p23": "",
+    "p24": "",
+    "p25": ""
+  },
+  "api": {
+    "c1": {
+      "classes": "45",
+      "excess": "6",
+      "resourcesScore": "18.5",
+      "resources": [
+        {
+          "course": "B.A. I Economics",
+          "consulted": "Text book",
+          "prescribed": "Yes",
+          "additional": "Notes"
+        }
+      ],
+      "innovative": [
+        {
+          "description": "Flipped class",
+          "score": "8"
+        },
+        {
+          "description": "Case studies",
+          "score": "7.25"
+        }
+      ],
+      "exam": [
+        {
+          "type": "Invigilation",
+          "assigned": "20",
+          "extent": "100",
+          "score": "10"
+        },
+        {
+          "type": "Evaluation",
+          "assigned": "300 scripts",
+          "extent": "100",
+          "score": "12"
+        }
+      ]
+    },
+    "c2": {
+      "extension": [
+        {
+          "activity": "NSS",
+          "hours": "2",
+          "score": "10"
+        },
+        {
+          "activity": "Cultural",
+          "hours": "1",
+          "score": "5"
+        }
+      ],
+      "management": [
+        {
+          "activity": "Admission committee",
+          "responsibility": "Yearly",
+          "score": "7.5"
+        },
+        {
+          "activity": "Timetable",
+          "responsibility": "Semester",
+          "score": "5"
+        }
+      ],
+      "professional": [
+        {
+          "activity": "Seminar organised",
+          "details": "one-day",
+          "score": "3"
+        }
+      ]
+    },
+    "c3": {
+      "journals": [
+        {
+          "title": "P1",
+          "row": "A1",
+          "score": "15"
+        },
+        {
+          "title": "P2",
+          "row": "A1",
+          "score": "7.5"
+        },
+        {
+          "title": "P3",
+          "row": "A2",
+          "score": "10"
+        }
+      ],
+      "chapters": [
+        {
+          "title": "Ch1",
+          "row": "B1a",
+          "score": "10"
+        },
+        {
+          "title": "Ch2",
+          "row": "B1b",
+          "score": "5"
+        },
+        {
+          "title": "Ch3",
+          "row": "B1b",
+          "score": "2.5"
+        }
+      ],
+      "proceedings": [
+        {
+          "title": "CP1",
+          "score": "10"
+        }
+      ],
+      "books": [
+        {
+          "title": "Book1",
+          "row": "B3b",
+          "score": "25"
+        }
+      ],
+      "ongoing": [
+        {
+          "title": "Minor project",
+          "row": "C1c",
+          "score": "10"
+        },
+        {
+          "title": "Consultancy",
+          "row": "C2",
+          "score": "10"
+        }
+      ],
+      "completed": [
+        {
+          "title": "Completed minor",
+          "row": "C3",
+          "score": "10"
+        }
+      ],
+      "guidance": {
+        "mphilEnrolled": "",
+        "mphilSubmitted": "",
+        "mphilAwarded": "",
+        "mphilScore": "3",
+        "phdEnrolled": "",
+        "phdSubmitted": "",
+        "phdAwarded": "",
+        "phdAwardedScore": "10",
+        "phdSubmittedScore": "7"
+      },
+      "training": [
+        {
+          "programme": "Refresher",
+          "row": "E1a",
+          "score": "20"
+        },
+        {
+          "programme": "FDP",
+          "row": "E1b",
+          "score": "10"
+        }
+      ],
+      "papers": [
+        {
+          "title": "T1",
+          "row": "E2b",
+          "score": "7.5"
+        },
+        {
+          "title": "T2",
+          "row": "E2b",
+          "score": "7.5"
+        },
+        {
+          "title": "T3",
+          "row": "E2c",
+          "score": "5"
+        },
+        {
+          "title": "T4",
+          "row": "E2d",
+          "score": "3"
+        }
+      ],
+      "lectures": [
+        {
+          "title": "L1",
+          "row": "E3b",
+          "score": "5"
+        }
+      ]
+    }
+  },
+  "ui": {
+    "section": "api"
+  },
+  "enclosures": [],
+  "teaching": [],
+  "assignments": [],
+  "results": [],
+  "savedAt": "2026-09-27T08:26:51.177Z"
+}
