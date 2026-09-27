@@ -73,7 +73,9 @@
           <h2>Employee Profile</h2>
           <p class="muted">Recurring service details are stored once and can be edited when they change.</p>
           <div class="grid two">
+            <label>Title<select name="title"><option value="">— choose —</option><option>Dr.</option><option>Shri</option><option>Smt</option><option>Kumari</option></select></label>
             <label>Full name (CAPITAL)<input name="fullName"></label>
+            <label>Father or Husband<select name="relation"><option value="">— choose —</option><option>Father</option><option>Husband</option></select></label>
             <label>Father/Husband name<input name="fatherHusband"></label>
             <label>Employee Code<input name="employeeCode"></label>
             <label>Subject<input name="subject"></label>
@@ -85,10 +87,12 @@
             <label>Academic qualification<input name="academicQualification"></label>
             <label>Professional qualification<input name="professionalQualification"></label>
             <label>Research degree<input name="researchDegree"></label>
-            <label>Date of Birth<input name="dob" placeholder="DD/MM/YYYY"></label>
+            <label>Date of Birth<input name="dob" placeholder="DD/MM/YYYY"><small id="dobWords" class="muted"></small></label>
             <label>Status<select name="serviceStatus"><option value="Permanent">Permanent</option><option>Quasi-permanent</option><option>Temporary</option><option>Contract</option></select></label>
+            <label>Land line telephone<input name="landline" inputmode="tel"></label>
             <label>Mobile<input name="mobile" inputmode="tel"></label>
             <label>Email<input name="email" type="email"></label>
+            <label>Date of submission (teacher's certificate)<input name="submissionDate" placeholder="DD/MM/YYYY"></label>
             <label>Permanent address<textarea name="permanentAddress" rows="3"></textarea></label>
           </div>
         </div>
@@ -110,10 +114,12 @@
       <section id="part2" class="section">
         <div class="card">
           <h2>Part II — Section I: Self Appraisal (17–25)</h2>
+          <p id="partLegacyNotice" class="warning hidden"></p>
           <label>17. Most important contribution this year<textarea name="p17" rows="5"></textarea></label>
           <label>18. Contribution in work not assigned to you<textarea name="p18" rows="4"></textarea></label>
           <label>19(b). Special effort to improve classroom instruction<textarea name="p19b" rows="4"></textarea></label>
-          <label>19(d). Academic activities organised in the college<textarea name="p19d" rows="4"></textarea></label>
+          <div class="section-heading"><div><h3>19(d). Academic activities organised in the college</h3></div><button type="button" class="secondary" data-add="activities">+ Add Activity</button></div>
+          <div id="activityRows" class="repeatable"></div>
           <label>19(f). New books relating to subject + brief extract<textarea name="p19f" rows="5"></textarea></label>
           <label>19(g). Vital teaching problems in order of importance<textarea name="p19g" rows="5"></textarea></label>
         </div>
@@ -146,23 +152,21 @@
         <div class="card">
           <h3>21. Academic / Professional Qualifications & Courses</h3>
           <label>21(i). Degrees / fresh qualifications<textarea name="p21i" rows="4"></textarea></label>
-          <label>21(ii). Orientation / Refresher / Summer School details<textarea name="p21ii" rows="4"></textarea></label>
+          <div class="section-heading"><div><h4>21(ii). Orientation / Refresher Course / Summer School attended during the year</h4></div><button type="button" class="secondary" data-add="orientation">+ Add Course</button></div>
+          <div id="orientationRows" class="repeatable"></div>
         </div>
 
         <div class="card">
           <h3>22. Research Work</h3>
-          <label>Are you doing research work?<select name="researchYesNo"><option>Yes</option><option>No</option></select></label>
-          <div class="grid two">
-            <label>Research project title<textarea name="researchTitle" rows="3"></textarea></label>
-            <label>University / Institution<textarea name="researchInstitution" rows="2"></textarea></label>
-            <label>Nature of project<input name="researchNature"></label>
-            <label>Present status<textarea name="researchStatus" rows="2"></textarea></label>
-          </div>
+          <label>Are you doing research work?<select name="researchYesNo"><option value="">— choose —</option><option>Yes</option><option>No</option></select></label>
+          <div class="section-heading"><div><p class="muted">If yes, give the details (one row per project).</p></div><button type="button" class="secondary" data-add="research">+ Add Project</button></div>
+          <div id="researchRows" class="repeatable"></div>
         </div>
 
         <div class="card">
           <label>23. Honours / Prizes / Awards<textarea name="p23" rows="3"></textarea></label>
-          <label>24. Satisfaction with present position / pay<textarea name="p24" rows="4"></textarea></label>
+          <label>24. Are you satisfied with your present position / pay?<select name="p24Satisfied"><option value="">— choose —</option><option>Yes</option><option>No</option></select></label>
+          <label>24. If not, do you want to change the profession? Give reasons.<textarea name="p24Reasons" rows="3"></textarea></label>
           <label>25. Other significant point<textarea name="p25" rows="4"></textarea></label>
         </div>
       </section>
@@ -258,6 +262,10 @@
 
       <section id="enclosures" class="section">
         <div class="card">
+          <div class="section-heading"><div><h2>30. Other Relevant Information</h2><p class="muted">Credentials, significant contributions, awards etc. not mentioned earlier.</p></div><button type="button" class="secondary" data-add="otherInfo">+ Add Item</button></div>
+          <div id="otherInfoRows" class="repeatable"></div>
+        </div>
+        <div class="card">
           <h2>List of Enclosures</h2>
           <p class="muted">Selected enclosures will later populate the official ACR list with automatic numbering and checked boxes.</p>
           <div id="enclosureList" class="checklist"></div>
@@ -273,7 +281,9 @@
         <div class="card">
           <h2>Ready for Generation</h2>
           <div id="reviewList" class="review-list"></div>
-          <p class="warning">Final DOCX/PDF generation is intentionally not enabled in v0.1. The next stage will bind these fields to the exact official ACR template and append the untouched Reporting Officer / Reviewing Officer pages.</p>
+          <h3>Problems to fix before the ACR can be generated</h3>
+          <ul id="reviewProblems" class="problems"></ul>
+          <p class="muted">The Word ACR is made on a PC: Export Draft, then run <code>python generate_acr.py &lt;file&gt; -o ACR.docx</code>.</p>
         </div>
       </section>
     </form>
@@ -296,6 +306,41 @@
       <div><label>Class / course<input data-key="classCourse"></label></div>
       <div><label>Assignments<input data-key="assignments" type="number" min="0"></label></div>
       <div><label>Class tests<input data-key="tests" type="number" min="0"></label></div>
+      <button type="button" class="danger remove-row">Remove</button>
+    </div>
+  </template>
+
+  <template id="activityTemplate">
+    <div class="repeat-row">
+      <div><label>Title of the activity<input data-key="title"></label></div>
+      <div><label>Brief detail of activity<textarea data-key="detail" rows="2"></textarea></label></div>
+      <button type="button" class="danger remove-row">Remove</button>
+    </div>
+  </template>
+
+  <template id="orientationTemplate">
+    <div class="repeat-row">
+      <div><label>Summer school / refresher / orientation course, with sponsoring agency<input data-key="course"></label></div>
+      <div><label>Place of school / ASC<input data-key="place"></label></div>
+      <div><label>Duration<input data-key="duration"></label></div>
+      <div><label>RC / OC No. with title<input data-key="rcoc"></label></div>
+      <button type="button" class="danger remove-row">Remove</button>
+    </div>
+  </template>
+
+  <template id="researchTemplate">
+    <div class="repeat-row">
+      <div><label>Topic / title of research project<input data-key="title"></label></div>
+      <div><label>University / institution registered with<input data-key="institution"></label></div>
+      <div><label>Nature (Minor / Major / Doctoral / Post-doctoral)<input data-key="nature"></label></div>
+      <div><label>Present status<input data-key="status"></label></div>
+      <button type="button" class="danger remove-row">Remove</button>
+    </div>
+  </template>
+
+  <template id="otherInfoTemplate">
+    <div class="repeat-row">
+      <div><label>Credential / contribution / award<textarea data-key="text" rows="2"></textarea></label></div>
       <button type="button" class="danger remove-row">Remove</button>
     </div>
   </template>

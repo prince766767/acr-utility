@@ -13,3 +13,5 @@ input.over,strong.over{color:var(--danger);border-color:var(--danger);font-weigh
 .preview-table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:.85rem}
 .preview-table th,.preview-table td{border:1px solid var(--line);padding:4px 6px;vertical-align:top}
 .preview-table td.val{color:#0000cc;font-weight:600;text-align:center;min-width:70px}
+#dobWords{display:block;margin-top:4px}
+small.over{color:var(--danger);font-weight:600}
