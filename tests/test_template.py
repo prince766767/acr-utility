@@ -73,5 +73,57 @@ class TemplatePage11(unittest.TestCase):
         self.assertEqual(sig[0].replace('	', '').strip(), 'Date:Signature (with stamp) of Principal')
 
 
+class TemplateTokens(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        from docx.oxml.ns import qn
+        cls.qn = staticmethod(qn)
+        cls.doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+
+    def runs_text(self, r):
+        return ''.join(t.text or '' for t in r.iter(self.qn('w:t')))
+
+    def test_every_token_alone_in_a_blue_run(self):
+        import re
+        sys.path.insert(0, str(ROOT))
+        from acr_fields import TOKENS
+        qn = self.qn
+        found = {}
+        for r in self.doc.element.body.iter(qn('w:r')):
+            if r.find('.//' + qn('w:r')) is not None:
+                continue  # a run holding a whole text box; its inner runs are checked themselves
+            text = self.runs_text(r)
+            for tok in re.findall(r'\{\{([A-Z0-9_]+)\}\}', text):
+                found[tok] = found.get(tok, 0) + 1
+                rpr = r.find(qn('w:rPr'))
+                colour = rpr.find(qn('w:color')).get(qn('w:val')) if rpr is not None and rpr.find(qn('w:color')) is not None else ''
+                self.assertEqual((text, colour.upper()), ('{{%s}}' % tok, '0000CC'), tok)
+        expected = {t: 1 for t in TOKENS}
+        expected['FULL_NAME'] = 2
+        expected['SESSION'] = 2
+        for tok in ('P17', 'P18', 'P19B'):  # text boxes: the displayed copy and the fallback copy
+            expected[tok] = 2
+        self.assertEqual(found, expected)
+
+    def test_title_and_relation_options_unstruck_and_separate(self):
+        qn = self.qn
+        for start, options in (('Appraisal of work and conduct', ('Dr.', 'Shri', 'Smt', 'Kumari')), ('Father/Husband', ('Father', 'Husband'))):
+            paras = [p for p in self.doc.element.body.iter(qn('w:p')) if ''.join(t.text or '' for t in p.iter(qn('w:t'))).startswith(start)]
+            self.assertEqual(len(paras), 1, start)
+            runs = {self.runs_text(r): r for r in paras[0].findall(qn('w:r'))}
+            for opt in options:
+                self.assertIn(opt, runs, opt)
+            for r in paras[0].findall(qn('w:r')):
+                rpr = r.find(qn('w:rPr'))
+                strike = rpr.find(qn('w:strike')) if rpr is not None else None
+                self.assertTrue(strike is None or strike.get(qn('w:val')) in ('0', 'false'), self.runs_text(r))
+
+    def test_wording_repairs(self):
+        full = ' '.join(t.text or '' for t in self.doc.element.body.iter(self.qn('w:t')))
+        self.assertIn('b) Hindi subject : Cleared / exempted (mention details)', full)
+        self.assertNotIn('Exempted vide Director', full)
+        self.assertNotIn('{{OTHER_INFO}}', full)
+        self.assertEqual(self.doc.tables[1].rows[-1].cells[0].text.strip(), 'Total periods per week')
+
 if __name__ == '__main__':
     unittest.main()
