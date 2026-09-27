@@ -168,6 +168,16 @@ class TemplateTokens(unittest.TestCase):
             if t == '{{PROMOTION}}':
                 self.assertIsNone(r.find(qn('w:rPr') + '/' + qn('w:i')), t)
 
+    def test_19a_19c_entry_rows_plain_and_short(self):
+        qn = self.qn
+        t1, t2 = self.doc.tables[1], self.doc.tables[2]
+        height = t1._tbl.tr_lst[1].find(qn('w:trPr') + '/' + qn('w:trHeight')).get(qn('w:val'))
+        for tr in t1._tbl.tr_lst[1:-1] + t2._tbl.tr_lst[1:]:
+            self.assertEqual(tr.find(qn('w:trPr') + '/' + qn('w:trHeight')).get(qn('w:val')), height)
+            for tc in tr.tc_lst:
+                self.assertEqual(len(tc.findall(qn('w:p'))), 1)
+                self.assertIsNone(tc.tcPr.find(qn('w:vAlign')) if tc.tcPr is not None else None)
+
     def test_point_20_rows_line_up_with_header(self):
         qn = self.qn
         def spans(tr):
