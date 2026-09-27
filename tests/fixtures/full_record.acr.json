@@ -1,0 +1,33 @@
+{
+  "session": "2031-32",
+  "profile": {
+    "collegeName": "Govt College Alpha", "collegeDistrict": "District Beta", "collegePin": "171001", "principalName": "Dr Principal Gamma",
+    "collegeAddress": "", "collegeOther": "",
+    "title": "Smt", "relation": "Husband", "fullName": "ASHA DEVI", "fatherHusband": "RAM LAL", "employeeCode": "EC-4321",
+    "subject": "Chemistry", "appointmentDate": "01/07/2012", "designation": "Associate Professor", "payBand": "Level 13A",
+    "basicPay": "131400", "promotionDate": "old-promotion-date", "academicQualification": "M.Sc. Chemistry First Division",
+    "professionalQualification": "NET", "researchDegree": "Ph.D Chemistry", "dob": "05/11/1980", "serviceStatus": "Permanent",
+    "permanentAddress": "House 12\nWard 3\nTown Delta\nPIN 176001", "landline": "01972-222333", "mobile": "+919800000001",
+    "email": "asha@example.org", "submissionDate": "15/05/2032"
+  },
+  "part1": {},
+  "part2": {
+    "p8": "No promotion", "p12": "Govt College Alpha: 01/04/2031 to 31/03/2032", "p13a": "Roll 12345, 2014", "p13b": "Cleared 2013",
+    "p14": "Bursar", "p17": "Contribution line 1\nContribution line 2", "p18": "Unassigned work", "p19b": "Special effort",
+    "p19f": "Book A - extract", "p19g": "Problem 1\nProblem 2", "totalPeriodsPerWeek": "24", "p21i": "No fresh degree this year",
+    "researchYesNo": "Yes", "p23": "Best teacher award", "p24Satisfied": "No", "p24Reasons": "Want promotion", "p25": "Other point"
+  },
+  "teaching": [
+    {"srNo": 1, "classCourse": "B.Sc. I", "college": "GCA", "allocated": 6, "delivered": 150, "syllabusPct": 100},
+    {"classCourse": "B.Sc. II", "college": "GCA", "allocated": 6, "delivered": 140, "syllabusPct": "95"}
+  ],
+  "assignments": [{"classCourse": "B.Sc. I", "assignments": 4, "tests": 2}],
+  "activities": [{"title": "Chem Quiz", "detail": "Inter-class quiz"}],
+  "results": [{"className": "B.Sc. III", "duration": "1 year", "appeared": 40, "passed": 38, "collegePct": "95", "universityPct": "88.5",
+               "divI": 10, "divII": 20, "divIII": 8, "failed": 2, "reason": ""}],
+  "orientation": [{"course": "Refresher in Chemistry, UGC", "place": "HRDC Shimla", "duration": "21 days", "rcoc": "RC-7"}],
+  "research": [{"title": "Green synthesis", "institution": "HPU", "nature": "Minor", "status": "Ongoing"}],
+  "otherInfo": [{"text": "Reviewer for journal X"}],
+  "enclosures": [{"label": "Certificate / sanction order", "checked": true}, {"label": "Degree / qualification certificate", "checked": false}],
+  "api": {}
+}

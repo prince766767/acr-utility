@@ -1,0 +1,41 @@
+{
+  "dob": [
+    {"in": "01/01/1900", "state": "ok", "words": "First January Nineteen Hundred", "digits": "01011900"},
+    {"in": "02/02/1905", "state": "ok", "words": "Second February Nineteen Hundred Five", "digits": "02021905"},
+    {"in": "03/03/1911", "state": "ok", "words": "Third March Nineteen Hundred Eleven", "digits": "03031911"},
+    {"in": "11/04/1912", "state": "ok", "words": "Eleventh April Nineteen Hundred Twelve", "digits": "11041912"},
+    {"in": "12/05/1913", "state": "ok", "words": "Twelfth May Nineteen Hundred Thirteen", "digits": "12051913"},
+    {"in": "13/06/1920", "state": "ok", "words": "Thirteenth June Nineteen Hundred Twenty", "digits": "13061920"},
+    {"in": "21/07/1921", "state": "ok", "words": "Twenty-first July Nineteen Hundred Twenty One", "digits": "21071921"},
+    {"in": "22/08/1999", "state": "ok", "words": "Twenty-second August Nineteen Hundred Ninety Nine", "digits": "22081999"},
+    {"in": "23/09/2000", "state": "ok", "words": "Twenty-third September Two Thousand", "digits": "23092000"},
+    {"in": "30/06/1987", "state": "ok", "words": "Thirtieth June Nineteen Hundred Eighty Seven", "digits": "30061987"},
+    {"in": "31/10/2005", "state": "ok", "words": "Thirty-first October Two Thousand Five", "digits": "31102005"},
+    {"in": "29/02/2000", "state": "ok", "words": "Twenty-ninth February Two Thousand", "digits": "29022000"},
+    {"in": " 20/12/2012 ", "state": "ok", "words": "Twentieth December Two Thousand Twelve", "digits": "20122012"},
+    {"in": "29/02/1900", "state": "bad"},
+    {"in": "31/04/1990", "state": "bad"},
+    {"in": "31/02/1990", "state": "bad"},
+    {"in": "1/2/1990", "state": "bad"},
+    {"in": "00/01/1990", "state": "bad"},
+    {"in": "15/13/1990", "state": "bad"},
+    {"in": "15/06/1899", "state": "bad"},
+    {"in": "15/06/2100", "state": "bad"},
+    {"in": "30-09-1983", "state": "bad"},
+    {"in": 30061987, "state": "bad"},
+    {"in": "", "state": "empty"},
+    {"in": "   ", "state": "empty"},
+    {"in": null, "state": "empty"}
+  ],
+  "problems": [
+    {"name": "nothing entered", "data": {}, "expected": []},
+    {"name": "valid entries", "data": {"profile": {"dob": "30/06/1987"}, "results": [{"collegePct": 92.5, "universityPct": "88"}]}, "expected": []},
+    {"name": "bad dob and percentages",
+     "data": {"profile": {"dob": "31/02/1990"}, "results": [{"collegePct": "92.5", "universityPct": "abc"}, {"collegePct": "x%"}, {"collegePct": "", "universityPct": " 70 "}]},
+     "expected": [
+       {"code": "BAD_DOB", "where": "Point 10", "message": "Point 10: date of birth \"31/02/1990\" is not a real date (use DD/MM/YYYY)."},
+       {"code": "BAD_NUMBER", "where": "Point 20, row 1", "message": "Point 20, row 1: university pass % \"abc\" is not a number."},
+       {"code": "BAD_NUMBER", "where": "Point 20, row 2", "message": "Point 20, row 2: college pass % \"x%\" is not a number."}
+     ]}
+  ]
+}
