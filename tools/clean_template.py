@@ -11,6 +11,7 @@ The master was made from one teacher's filled ACR and still carried that teacher
   6. restores two certificate lines typed in the form's own colour (inside text boxes) to the form's wording.
 Run with --dry-run to list what would change. Refuses to run on an already-clean template.
 """
+import re
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -22,11 +23,18 @@ DATA_COLOURS = {'0000CC', '006600', 'FF0000'}
 FORM_COLOUR = '221F20'
 # Coloured runs that are really the official form's own wording (UGC_ACR_Form.pdf pages 1 and 12): kept, made black.
 KEEP_AS_FORM = {'Date:', 'Place:', 'Principal', 'Govt. Degree', '__________________'}
-# Coloured runs where the form's wording was extended with a college name: restored to the form's wording.
-RESTORE_FORM = {'College Alpha (Beta)': 'College.'}
-# Text nodes in the form's own colour that still carry the teacher's entries (UGC_ACR_Form.pdf page 12 wording).
-RESTORE_TEXT = {'Signature (with stamp) of Principal Govt. Degree College Alpha (Beta)': 'Signature (with stamp) of Principal Govt. Degree College.',
-                'Designation, Assistant Professor (Botany)': 'Designation,'}
+# Coloured runs where the form's wording "College." had been extended with a college name: restored to the form's wording.
+RESTORE_FORM = [(re.compile(r'College \S.*\(.+\)'), 'College.')]
+# Text nodes in the form's own colour that still carried the teacher's entries (UGC_ACR_Form.pdf page 12 wording).
+RESTORE_TEXT = [(re.compile(r'(Signature \(with stamp\) of Principal Govt\. Degree College) \S.*'), r'\1.'),
+                (re.compile(r'Designation, \S.*'), 'Designation,')]
+
+
+def restore(rules, text):
+    for pattern, replacement in rules:
+        if pattern.fullmatch(text):
+            return pattern.sub(replacement, text)
+    return None
 
 
 def run_colour(r):
@@ -66,16 +74,16 @@ def main(dry):
         raise SystemExit('Table 9: expected exactly one "** Besides" row; nothing changed.')
 
     kept = [r for r in runs if run_text(r) in KEEP_AS_FORM]
-    restored = [r for r in runs if run_text(r) in RESTORE_FORM]
+    restored = [r for r in runs if restore(RESTORE_FORM, run_text(r)) is not None]
     blanked = [r for r in runs if r not in kept and r not in restored]
     print(f'1a. Keep {len(kept)} runs of form wording (made black):', ' | '.join(run_text(r) for r in kept))
-    print(f'1b. Restore form wording:', ' | '.join(f'{run_text(r)} -> {RESTORE_FORM[run_text(r)]}' for r in restored))
+    print(f'1b. Restore form wording:', ' | '.join(f'{run_text(r)} -> {restore(RESTORE_FORM, run_text(r))}' for r in restored))
     print(f'1c. Blank {len(blanked)} leftover entries:')
     print('   ' + ' | '.join(run_text(r).strip()[:60] for r in blanked))
     for r in kept:
         make_form_colour(r)
     for r in restored:
-        set_text(r, RESTORE_FORM[run_text(r)])
+        set_text(r, restore(RESTORE_FORM, run_text(r)))
         make_form_colour(r)
     for r in blanked:
         set_text(r, '')
@@ -126,8 +134,9 @@ def main(dry):
 
     restored_text = 0
     for t in body.iter(qn('w:t')):
-        if t.text in RESTORE_TEXT:
-            t.text = RESTORE_TEXT[t.text]
+        new = restore(RESTORE_TEXT, t.text or '')
+        if new is not None:
+            t.text = new
             restored_text += 1
     if restored_text != 3:
         raise SystemExit(f'Expected 3 certificate text nodes to restore, found {restored_text}; nothing changed.')

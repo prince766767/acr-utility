@@ -1,8 +1,9 @@
-import sys, unittest
+import re, sys, unittest
 from pathlib import Path
 from docx import Document
 
 ROOT = Path(__file__).resolve().parents[1]
+OLD_TEACHER_WORDS = {'13ff79d7bc39bdba', '2e9dfdfa68634c18', '567af38c766a7689', '5d0569ce4c2a92ab', '62db5835117e3241', '8f00d16bb89ea112', '9bd2ef7a9ddbb223', 'acee714c1985a2e9', 'c067794a648ca326', 'e994b9330ad9f032', 'ed96d148b84152b5', 'f97438b042886e91'}
 
 
 class Template27iii(unittest.TestCase):
@@ -50,6 +51,15 @@ class TemplateIsBlank(unittest.TestCase):
         full = ' '.join(t.text or '' for t in self.doc.element.body.iter(qn('w:t')))  # paragraphs and tables
         for s in ('NIL', '2024-25'):
             self.assertNotIn(s, full)
+        # Names, places and numbers of the teacher whose filled ACR the master was made from, stored only as hashes
+        # so that this test does not itself keep the details.
+        import hashlib
+        words = {w.lower() for w in re.findall(r'[A-Za-z0-9]+', full)}
+        self.assertEqual({w for w in words if hashlib.sha256(w.encode()).hexdigest()[:16] in OLD_TEACHER_WORDS}, set())
+
+    def test_file_properties_blank(self):
+        props = self.doc.core_properties
+        self.assertEqual((props.author, props.last_modified_by, props.title), ('', '', ''))
 
     def test_no_auto_numbering_in_entry_rows(self):
         from docx.oxml.ns import qn
