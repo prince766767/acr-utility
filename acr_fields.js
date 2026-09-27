@@ -1,5 +1,6 @@
 // Date of birth in words, entry checks and old-draft migration for the cover page, Part I and Part II.
 // parseDob, dobWords and fieldProblems mirror acr_fields.py; both are checked against tests/fixtures/field_cases.json.
+import { isEmptyEntry } from './api_tally.js';
 
 const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve',
   'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -108,4 +109,121 @@ export function migrateDraft(raw) {
     }
   }
   return { data, notices };
+}
+
+// ---- Word-file values: ports of acr_fields.py (token_values, part_tables, variation) ----
+
+export const TITLES = ['Dr.', 'Shri', 'Smt', 'Kumari'];
+export const RELATIONS = ['Father', 'Husband'];
+export const TOKENS = ['SESSION', 'COLLEGE_NAME', 'COLLEGE_PLACE', 'FULL_NAME', 'FATHER_HUSBAND', 'EMPLOYEE_CODE', 'SUBJECT',
+  'APPOINTMENT_DATE', 'DESIGNATION', 'PAY_INFO', 'PROMOTION', 'ACADEMIC_QUAL', 'PROFESSIONAL_QUAL', 'RESEARCH_DEGREE',
+  'DOB_WORDS', 'SERVICE_STATUS', 'COLLEGES_SERVED', 'DEPT_EXAM', 'HINDI_DETAILS', 'OTHER_ASSIGNMENT', 'ADDR1', 'ADDR2',
+  'ADDR3', 'LANDLINE', 'MOBILE', 'EMAIL', 'P17', 'P18', 'P19B', 'P19F', 'P19G', 'P21I', 'RESEARCH_YES_NO', 'P23',
+  'P24_SATISFIED', 'P24_REASONS', 'P25', 'PLACE', 'REPORT_DATE', 'CERT_DESIGNATION', 'PRINCIPAL_NAME'];
+
+const s = v => (v === undefined || v === null ? '' : String(v).replace(/\r\n/g, '\n').trim());
+const joinFilled = (parts, sep = ', ') => parts.map(s).filter(Boolean).join(sep);
+const list = x => (Array.isArray(x) ? x : []);
+
+function decimal(v) {
+  if (v === undefined || v === null || typeof v === 'boolean') return null;
+  const t = String(v).trim();
+  if (!NUM_RE.test(t)) return null;
+  const neg = t.startsWith('-');
+  const [whole, frac = ''] = (neg ? t.slice(1) : t).split('.');
+  return { n: BigInt((neg ? '-' : '') + whole + frac), scale: frac.length };
+}
+
+// Point 20 column 7: college pass % minus university pass %, rounded half up to 2 decimals, '+' when positive.
+export function variation(college, university) {
+  const a = decimal(college), b = decimal(university);
+  if (!a || !b) return '';
+  const scale = Math.max(a.scale, b.scale, 2);
+  const d = a.n * 10n ** BigInt(scale - a.scale) - b.n * 10n ** BigInt(scale - b.scale);
+  const div = 10n ** BigInt(scale - 2);
+  let q = d / div;
+  const rem = d % div;
+  if (rem !== 0n && (rem < 0n ? -rem : rem) * 2n >= div) q += d < 0n ? -1n : 1n;
+  if (q === 0n) return '0';
+  const neg = q < 0n, abs = neg ? -q : q;
+  const frac = (abs % 100n).toString().padStart(2, '0').replace(/0+$/, '');
+  const text = (abs / 100n).toString() + (frac ? '.' + frac : '');
+  return (neg ? '-' : '+') + text;
+}
+
+export function tokenValues(data) {
+  const d = obj(data), p = obj(d.profile), a = obj(d.part2);
+  const dob = parseDob(p.dob);
+  const lines = s(p.permanentAddress).split('\n').map(x => x.trim()).filter(Boolean);
+  const basic = s(p.basicPay);
+  return {
+    SESSION: s(d.session),
+    COLLEGE_NAME: s(p.collegeName),
+    COLLEGE_PLACE: joinFilled([p.collegeDistrict, p.collegePin]),
+    FULL_NAME: s(p.fullName),
+    FATHER_HUSBAND: s(p.fatherHusband),
+    EMPLOYEE_CODE: s(p.employeeCode),
+    SUBJECT: s(p.subject),
+    APPOINTMENT_DATE: s(p.appointmentDate),
+    DESIGNATION: s(p.designation),
+    PAY_INFO: joinFilled([p.payBand, basic ? `Basic Pay ${basic}` : ''], '; '),
+    PROMOTION: s(a.p8) || s(p.promotionDate),
+    ACADEMIC_QUAL: s(p.academicQualification),
+    PROFESSIONAL_QUAL: s(p.professionalQualification),
+    RESEARCH_DEGREE: s(p.researchDegree),
+    DOB_WORDS: dob.state === 'ok' ? dobWords(dob) : '',
+    SERVICE_STATUS: s(p.serviceStatus),
+    COLLEGES_SERVED: s(a.p12),
+    DEPT_EXAM: s(a.p13a),
+    HINDI_DETAILS: s(a.p13b),
+    OTHER_ASSIGNMENT: s(a.p14),
+    ADDR1: lines[0] || '',
+    ADDR2: lines[1] || '',
+    ADDR3: lines.slice(2).join(', '),
+    LANDLINE: s(p.landline),
+    MOBILE: s(p.mobile),
+    EMAIL: s(p.email),
+    P17: s(a.p17),
+    P18: s(a.p18),
+    P19B: s(a.p19b),
+    P19F: s(a.p19f),
+    P19G: s(a.p19g),
+    P21I: s(a.p21i),
+    RESEARCH_YES_NO: s(a.researchYesNo),
+    P23: s(a.p23),
+    P24_SATISFIED: s(a.p24Satisfied),
+    P24_REASONS: s(a.p24Reasons),
+    P25: s(a.p25),
+    PLACE: joinFilled([p.collegeName, p.collegePin]),
+    REPORT_DATE: s(p.submissionDate),
+    CERT_DESIGNATION: s(p.designation),
+    PRINCIPAL_NAME: s(p.principalName),
+  };
+}
+
+const rows = (data, key) => list(obj(data)[key]).filter(e => e && typeof e === 'object' && !Array.isArray(e) && !isEmptyEntry(e));
+
+export function partTables(data) {
+  const d = obj(data), p = obj(d.profile), a = obj(d.part2);
+  const dob = parseDob(p.dob);
+  const two = n => String(n).padStart(2, '0');
+  return {
+    dob_digits: dob.state === 'ok' ? `${two(dob.d)}${two(dob.m)}${String(dob.y).padStart(4, '0')}` : '',
+    teaching: rows(d, 'teaching').map((e, i) => {
+      const pct = s(e.syllabusPct);
+      return [s(e.srNo) || String(i + 1), s(e.classCourse), s(e.college), s(e.allocated), s(e.delivered),
+        !pct || pct.endsWith('%') ? pct : pct + '%'];
+    }),
+    total_periods: s(a.totalPeriodsPerWeek),
+    assignments: rows(d, 'assignments').map((e, i) => [String(i + 1), s(e.classCourse), s(e.assignments), s(e.tests), '']),
+    activities: rows(d, 'activities').map(e => [s(e.title), s(e.detail)]),
+    results: rows(d, 'results').map(e => {
+      const v = variation(e.collegePct, e.universityPct);
+      return [...['className', 'duration', 'appeared', 'passed', 'collegePct', 'universityPct'].map(k => s(e[k])), v, v,
+        ...['divI', 'divII', 'divIII', 'failed', 'reason'].map(k => s(e[k]))];
+    }),
+    orientation: rows(d, 'orientation').map(e => ['course', 'place', 'duration', 'rcoc'].map(k => s(e[k]))),
+    research: rows(d, 'research').map(e => ['title', 'institution', 'nature', 'status'].map(k => s(e[k]))),
+    other_info: rows(d, 'otherInfo').map((e, i) => [String(i + 1), s(e.text)]),
+  };
 }

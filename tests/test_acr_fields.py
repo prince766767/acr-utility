@@ -33,6 +33,13 @@ class Variation(unittest.TestCase):
         self.assertEqual(variation('abc', 50), '')
 
 
+    def test_shared_cases(self):
+        cases = json.loads((ROOT / 'tests' / 'fixtures' / 'variation_cases.json').read_text(encoding='utf-8'))
+        for c, u, expected in cases:
+            with self.subTest(c=c, u=u):
+                self.assertEqual(variation(c, u), expected)
+
+
 class Problems(unittest.TestCase):
     def test_shared_cases(self):
         for c in CASES['problems']:

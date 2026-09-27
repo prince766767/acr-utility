@@ -267,3 +267,12 @@ export function lastYearCells(ly) {
   const [a, b, c] = parsed.map(p => p.cents);
   return { cat1: fmt(a), cat2: fmt(b), total12: fmt(a + b), cat3: fmt(c) };
 }
+
+// Printed in the "Whether international/National/State..." column of 28 E(ii) and E(iii).
+export const LEVEL_TEXT = { E2a: 'International', E2b: 'National', E2c: 'Regional / State', E2d: 'Local - University / College',
+  E3a: 'International', E3b: 'National' };
+
+export function scoreText(v) {
+  const r = toCents(v);
+  return r.state === 'ok' ? fmt(r.cents) : '';
+}
