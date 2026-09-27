@@ -62,5 +62,16 @@ class TemplateIsBlank(unittest.TestCase):
         self.assertEqual(self.doc.tables[29].rows[8].cells[0].text.strip(), 'E (ii)')
 
 
+class TemplatePage11(unittest.TestCase):
+    def test_certificate_lines_match_form(self):
+        doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+        texts = [p.text for p in doc.paragraphs]
+        self.assertIn('Place: {{PLACE}}Signature of the reported on officer', [t.replace('	', '') for t in texts])
+        self.assertFalse(any('{{COLLEGE_PIN}}, {{COLLEGE_NAME}}' in t for t in texts))
+        sig = [t for t in texts if 'Signature (with stamp)' in t]
+        self.assertEqual(len(sig), 1)
+        self.assertEqual(sig[0].replace('	', '').strip(), 'Date:Signature (with stamp) of Principal')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -276,7 +276,9 @@ def generate(data,out_docx):
       'SERVICE_STATUS':p.get('serviceStatus',''), 'DEPT_EXAM_ROLL':a.get('departmentalExam',''), 'DEPT_EXAM_SESSION':a.get('departmentalExamSession',''), 'HINDI_DETAILS':re.sub(r'^.*?letter no\.:\s*','',str(a.get('hindiDetails',''))),
       'OTHER_ASSIGNMENT':a.get('otherAssignment',''), 'ADDR1':p.get('addressLine1',''), 'ADDR2':p.get('addressLine2',''), 'ADDR3':p.get('addressLine3',''), 'MOBILE':p.get('mobile',''), 'EMAIL':p.get('email',''),
       'P17':a.get('p17',''), 'P18':a.get('p18',''), 'P19B':a.get('p19b',''), 'P21I':a.get('p21i',''), 'P24A':a.get('p24a',''), 'P24B':a.get('p24b',''), 'P24C':a.get('p24c',''), 'P23':a.get('p23',''), 'OTHER_INFO':a.get('otherInfo',''),
-      'REPORT_DATE':data.get('reportDate','')
+      'REPORT_DATE':data.get('reportDate',''),
+      # Place in the teacher's certificate: only the filled parts, so no stray comma when a part is empty.
+      'PLACE':', '.join(x for x in (str(data.get('college',{}).get('pin','') or ''),str(data.get('college',{}).get('name','') or '')) if x.strip())
     }
     # Tables 1/2/3/4
     teaching=[]

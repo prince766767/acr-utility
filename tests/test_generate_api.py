@@ -110,6 +110,15 @@ class GenerateApi(unittest.TestCase):
         self.assertEqual(txt(d, 29, 11, 5), '18')
         self.assertEqual(txt(d, 23, 4, 3), '18')
 
+    def test_place_line(self):
+        def place(college):
+            out = self.tmp / 'place.docx'
+            generate_acr.generate({'college': college}, out)
+            return [p.text.replace('	', '') for p in Document(out).paragraphs if p.text.startswith('Place: ') and 'reported on officer' in p.text][0]
+        self.assertEqual(place({}), 'Place: Signature of the reported on officer')
+        self.assertEqual(place({'name': 'Govt. College X'}), 'Place: Govt. College XSignature of the reported on officer')
+        self.assertEqual(place({'pin': '171009', 'name': 'Govt. College X'}), 'Place: 171009, Govt. College XSignature of the reported on officer')
+
     def test_problems_block_generation(self):
         out = self.tmp / 'blocked.docx'
         with self.assertRaises(generate_acr.ApiProblemsError) as ctx:
