@@ -112,7 +112,7 @@ def fill_api_tables(doc, api, v):
     set_cell(doc, 8, 1, 2, v['p42']['i_a'])
     set_cell(doc, 8, 2, 2, v['p42']['i_b'])
     # 26(ii)
-    fill_between(doc, 9, 1, find_row(T[9], 0, '**Besides'),
+    fill_between(doc, 9, 1, find_row(T[9], 0, 'API score based'),
                  [[i, field(e, 'course'), field(e, 'consulted'), field(e, 'prescribed'), field(e, 'additional')]
                   for i, e in enumerate(entries(api, 'c1', 'resources'), 1)])
     score_row = find_row(T[9], 0, 'APIscorebased') + 1

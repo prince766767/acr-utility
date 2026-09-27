@@ -31,5 +31,36 @@ class Template27iii(unittest.TestCase):
                     self.assertIsNone(tc.tcPr.find(qn('w:vMerge')) if tc.tcPr is not None else None, f'table {ti} row {r}')
 
 
+class TemplateIsBlank(unittest.TestCase):
+    """The master must match the blank official form: no teacher's leftover entries."""
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+
+    def test_no_leftover_entries(self):
+        from docx.oxml.ns import qn
+        left = []
+        for r in self.doc.element.body.iter(qn('w:r')):
+            rpr = r.find(qn('w:rPr'))
+            c = rpr.find(qn('w:color')) if rpr is not None else None
+            text = ''.join(t.text or '' for t in r.iter(qn('w:t'))).strip()
+            if c is not None and (c.get(qn('w:val')) or '').upper() in ('0000CC', '006600', 'FF0000') and text and '{{' not in text:
+                left.append(text)
+        self.assertEqual(left, [])
+        full = ' '.join(t.text or '' for t in self.doc.element.body.iter(qn('w:t')))  # paragraphs and tables
+        for s in ('NIL', '2024-25'):
+            self.assertNotIn(s, full)
+
+    def test_no_auto_numbering_in_entry_rows(self):
+        from docx.oxml.ns import qn
+        for ti in range(7, 23):
+            for tr in self.doc.tables[ti]._tbl.tr_lst[1:]:
+                self.assertEqual(tr.findall('.//' + qn('w:numPr')), [], f'table {ti}')
+
+    def test_26ii_has_no_leftover_note_and_44_has_E_ii_label(self):
+        self.assertFalse(any('Besides' in r.cells[0].text for r in self.doc.tables[9].rows))
+        self.assertEqual(self.doc.tables[29].rows[8].cells[0].text.strip(), 'E (ii)')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -26,6 +26,11 @@ class GenerateApi(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
+    def test_session_in_pbas_header(self):
+        paras = [p.text for p in self.doc.paragraphs if 'FOR THE SESSION/YEAR' in p.text]
+        self.assertEqual(len(paras), 1)
+        self.assertIn('2025-26', paras[0])
+
     def test_point_29_col4_and_col3_untouched(self):
         d = self.doc
         self.assertEqual([txt(d, 23, r, 3) for r in (1, 2, 3, 4)], ['106.75', '25', '131.75', '193'])
@@ -60,7 +65,7 @@ class GenerateApi(unittest.TestCase):
         self.assertEqual(txt(d, 8, 1, 2), '45')
         self.assertEqual(txt(d, 8, 2, 2), '6')
         self.assertEqual([txt(d, 9, 1, c) for c in range(5)], ['1', 'B.A. I Economics', 'Text book', 'Yes', 'Notes'])
-        self.assertEqual(txt(d, 9, 6, 4), '18.5')
+        self.assertEqual(txt(d, 9, 5, 4), '18.5')
         self.assertEqual([txt(d, 10, r, 2) for r in (1, 2, 3)], ['8', '7.25', '15.25'])
         self.assertEqual([txt(d, 11, r, 4) for r in (1, 2, 3)], ['10', '12', '22'])
 
@@ -97,7 +102,7 @@ class GenerateApi(unittest.TestCase):
         self.assertEqual(txt(d, 10, 5, 1), 'Total Score ( Max: 20 )')
         self.assertEqual([txt(d, 11, r, 4) for r in range(1, 7)], ['5', '5', '5', '5', '5', '25'])
         self.assertEqual([txt(d, 9, r, 1) for r in range(1, 6)], ['c0', 'c1', 'c2', 'c3', 'c4'])
-        self.assertEqual(txt(d, 9, 8, 4), '12')
+        self.assertEqual(txt(d, 9, 7, 4), '12')
         t12 = [(txt(d, 12, r, 1), txt(d, 12, r, 3)) for r in range(len(d.tables[12].rows))]
         self.assertEqual(t12[2:7], [('e0', '4'), ('e1', '4'), ('e2', '4'), ('e3', '4'), ('Total (Max.20)', '16')])
         self.assertEqual(t12[-5:], [('p0', '2.5'), ('p1', '2.5'), ('p2', '2.5'), ('Total (Max.15)', '7.5'), (t12[-1][0], '23.5')])
