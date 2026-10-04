@@ -16,7 +16,7 @@
       <div id="userLine" class="muted">Personal ACR assistant</div>
     </div>
     <div class="top-actions">
-      <a id="earlierLink" class="earlier-link" href="v0.4/">Filled your ACR in the earlier version? Open it here</a>
+      <a id="earlierLink" class="earlier-link" href="v0.4/" aria-controls="v04Panel">Filled your ACR in the earlier version? Open it here</a>
       <button type="button" id="draftDriveBtn" class="secondary hidden" aria-controls="draftMenu">Keep my draft in Google Drive</button>
       <button type="button" id="styleBtn" class="secondary" aria-expanded="false" aria-controls="stylePanel">Text style</button>
       <button type="button" id="previewBtn">Preview</button>
@@ -415,6 +415,24 @@
         <button type="button" id="syncUseDevice" class="secondary">Keep this device's copy</button>
       </div>
       <p class="muted">The copy you don't choose is not deleted: it is kept in your Drive folder as an "other copy" file.</p>
+    </div>
+  </div>
+  <div id="v04Panel" class="style-panel hidden" role="dialog" aria-labelledby="v04Title">
+    <div class="style-head"><strong id="v04Title">The earlier version (v0.4)</strong><button type="button" id="v04Close" class="secondary">Close</button></div>
+    <p>Bring an ACR you filled in the earlier version into this one. The earlier version keeps its own copy.</p>
+    <div id="v04List" class="v04-list"></div>
+    <p class="muted">Filled it on another device? In the earlier version there, use <em>Years &amp; backup → Export backup</em>, then here use <em>Import Draft</em> with that file.</p>
+    <p><a href="v0.4/">Open the earlier version instead</a></p>
+  </div>
+  <div id="importReport" class="sync-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="importReportTitle">
+    <div class="sync-box">
+      <h3 id="importReportTitle">Brought over from the earlier version</h3>
+      <p id="importReportIntro"></p>
+      <ul id="importReportList" class="import-report"></ul>
+      <div class="toolbar-buttons">
+        <button type="button" id="importReportPreview">Check it with Preview</button>
+        <button type="button" id="importReportClose" class="secondary">Close</button>
+      </div>
     </div>
   </div>
   <div id="stylePanel" class="style-panel hidden" role="dialog" aria-labelledby="styleTitle">

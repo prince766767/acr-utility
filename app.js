@@ -4,7 +4,7 @@ import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.
 import firebaseConfig from './firebase-config.js';
 import { tally, normalizeApi, emptyApi, lastYearProblems, lastYearCells } from './api_tally.js';
 import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
-import { parseDob, dobWords, fieldProblems, migrateDraft } from './acr_fields.js';
+import { parseDob, dobWords, fieldProblems, migrateDraft, ENCLOSURE_DEFAULTS } from './acr_fields.js';
 import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
 import { generateDocx, ProblemsError, normalizeStyle, STYLE_FONTS, DEFAULT_STYLE } from './docx_engine.js';
@@ -13,6 +13,7 @@ import googleConfig from './google-config.js';
 import { loadGis, createTokenSource, createDrive, FOLDER_NAME } from './google_drive.js';
 import { shareFiles, downloadFile } from './share.js';
 import { createDraftSync } from './draft_sync.js';
+import { isV04, v04Docs, findV04Docs, convertV04 } from './import_v04.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -40,7 +41,7 @@ const googleTokens=googleReady?createTokenSource({clientId:googleConfig.clientId
 const drive=googleReady?createDrive({fetch:(...a)=>fetch(...a),getToken:o=>googleTokens.getToken(o)}):null;
 let docxBlocked=false, docxBusy=false, pendingShare=null;
 
-const enclosureDefaults=['Certificate / sanction order','FDP / Orientation / Refresher certificate','Conference / seminar certificate','Paper presentation / publication','Research project document','Degree / qualification certificate','Award / honour certificate','Other supporting document'];
+const enclosureDefaults=ENCLOSURE_DEFAULTS;
 
 function deepAssign(obj,path,value){let p=obj;for(let i=0;i<path.length-1;i++){p=p[path[i]]??={};}p[path[path.length-1]]=value;}
 function collectSimple(){
@@ -178,6 +179,7 @@ $('importInput').addEventListener('change',async e=>{
   const file=e.target.files[0]; e.target.value=''; if(!file) return;
   let rec=null; try{rec=JSON.parse(await file.text());}catch(err){console.error(err);}
   if(!rec||typeof rec!=='object'){alert('Invalid ACR draft file.');return;}
+  if(isV04(rec)){const docs=v04Docs(rec); if(docs.length===1) importV04(docs[0]); else openV04Panel(docs.map(doc=>({doc,session:String(doc.session||''),name:String((doc.p1||{}).fullName||''),updatedAt:doc.updatedAt||''})),'in this backup file'); return;}
   const s=sessions.isSession(rec.session)?rec.session:'';
   const exists=s?sessions.hasRecord(store,s):store.getItem(sessions.DRAFT_KEY)!==null;
   if(exists&&!confirm(s?`Replace the saved ${s} record with this file?`:'Replace the unnamed draft with this file?')) return;
@@ -326,6 +328,38 @@ $('previewBtn').addEventListener('click',openPreview);
 $('previewClose').addEventListener('click',closePreview);
 $('previewToReview').addEventListener('click',()=>{closePreview(); document.querySelector('.tabs button[data-section="review"]').click();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('previewPanel').classList.contains('hidden'))closePreview();});
+
+// Bring an ACR over from the earlier version (spec 2026-10-04-import-v04-design.md). v0.4's data is only read.
+function openV04Panel(found=findV04Docs(store),where='in this browser'){
+  const list=$('v04List'); list.replaceChildren();
+  if(!found.length){const p=document.createElement('p'); p.className='muted'; p.textContent=`No ACRs from the earlier version were found ${where}.`; list.appendChild(p);}
+  for(const f of found){
+    const row=document.createElement('div'); row.className='v04-item';
+    const label=document.createElement('span');
+    label.textContent=`${f.session||'No session'} · ${f.name||'(no name)'}${f.updatedAt?' · saved '+new Date(f.updatedAt).toLocaleDateString():''}`;
+    const b=document.createElement('button'); b.type='button'; b.textContent='Import'; b.addEventListener('click',()=>{$('v04Panel').classList.add('hidden'); importV04(f.doc);});
+    row.append(label,b); list.appendChild(row);
+  }
+  $('v04Panel').classList.remove('hidden');
+}
+function importV04(doc){
+  const {record,report}=convertV04(doc);
+  const s=sessions.isSession(record.session)?record.session:'';
+  record.session=s;
+  const exists=s?sessions.hasRecord(store,s):store.getItem(sessions.DRAFT_KEY)!==null;
+  if(exists&&!confirm(s?`Replace the ${s} record in this version with the one from the earlier version?`:'Replace the unnamed draft in this version with the ACR from the earlier version?')) return;
+  saveLocal(); record.savedAt=new Date().toISOString(); sessions.saveRecord(store,record);
+  if(s) openSession(s); else {applySimple(record); store.setItem(sessions.CURRENT_KEY,''); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList();}
+  renderRepeatables(); renderEnclosures(); renderReview();
+  $('syncStatus').textContent=s?`Brought the ${s} ACR over from the earlier version.`:'Brought the ACR over from the earlier version (unnamed draft).';
+  $('importReportIntro').textContent=`${s?'The '+s+' ACR':'The ACR'} is now in this version. Please check these points; the earlier version still has its own copy:`;
+  $('importReportList').replaceChildren(...report.map(t=>{const li=document.createElement('li'); li.textContent=t; return li;}));
+  $('importReport').classList.remove('hidden');
+}
+$('earlierLink').addEventListener('click',e=>{e.preventDefault(); openV04Panel();});
+$('v04Close').addEventListener('click',()=>$('v04Panel').classList.add('hidden'));
+$('importReportClose').addEventListener('click',()=>$('importReport').classList.add('hidden'));
+$('importReportPreview').addEventListener('click',()=>{$('importReport').classList.add('hidden'); openPreview();});
 
 // Keep the draft in Google Drive (spec 2026-10-04-draft-in-drive-design.md): saved there a few seconds after typing
 // stops; on another device the newer copy is offered. The device copy is never replaced without asking.

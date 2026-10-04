@@ -227,3 +227,8 @@ export function partTables(data) {
     other_info: rows(d, 'otherInfo').map((e, i) => [String(i + 1), s(e.text)]),
   };
 }
+
+// The ready-made enclosure ticks on the Enclosures tab (app.js; import_v04.js matches v0.4 enclosures to them).
+export const ENCLOSURE_DEFAULTS = ['Certificate / sanction order', 'FDP / Orientation / Refresher certificate', 'Conference / seminar certificate',
+  'Paper presentation / publication', 'Research project document', 'Degree / qualification certificate', 'Award / honour certificate',
+  'Other supporting document'];
