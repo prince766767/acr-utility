@@ -20,7 +20,7 @@ The two buttons stay hidden until `google-config.js` holds your own OAuth Client
 
 **What a teacher sees the first time:** a Google window asking to let "ACR Utility" see, edit, create and delete only the Drive files it uses. After they allow it:
 
-- **Save to Google Drive** creates the folder "ACR Utility" in their Drive with `ACR_<name>_<session>.docx` and `.pdf`. Saving again replaces them.
+- **Save to Google Drive** creates the folder "ACR Utility - Word and PDF" in their Drive (v0.4 used "ACR Utility" for its sync files) with `ACR_<name>_<session>.docx` and `.pdf`. Saving again replaces them.
 - **Share / Email** opens the phone's share menu with both files attached. They pick Gmail and send it to themselves.
 
 **Privacy:** once the Client ID is set, the page loads Google's sign-in script (accounts.google.com) on each visit so the sign-in pop-up opens instantly; nothing is sent to Google until the teacher taps Share or Save. The files go only to the teacher's own Drive and their own share target. The app can see only files it created. The temporary Google Doc used to make the PDF is deleted straight away, and no data passes through any other server.

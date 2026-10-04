@@ -1,7 +1,7 @@
 // Google sign-in (GIS token client, drive.file only) and the Drive calls the app needs.
 // The access token lives in memory only. Network functions take fetch/getToken so tests can fake them.
 export const SCOPE = 'https://www.googleapis.com/auth/drive.file';
-export const FOLDER_NAME = 'ACR Utility';
+export const FOLDER_NAME = 'ACR Utility - Word and PDF'; // not 'ACR Utility': that is v0.4's Drive-sync folder
 const API = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const FOLDER_MIME = 'application/vnd.google-apps.folder';

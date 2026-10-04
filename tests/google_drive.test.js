@@ -33,7 +33,7 @@ test('ensureFolder reuses an existing folder', async () => {
   assert.equal(fetch.calls.length, 1);
   assert.equal(fetch.calls[0].method, 'GET');
   assert.equal(fetch.calls[0].headers.Authorization, 'Bearer T1');
-  assert.equal(query(fetch.calls[0].url), "name='ACR Utility' and mimeType='application/vnd.google-apps.folder' and trashed=false");
+  assert.equal(query(fetch.calls[0].url), "name='ACR Utility - Word and PDF' and mimeType='application/vnd.google-apps.folder' and trashed=false");
 });
 
 test('ensureFolder creates the folder when none is found', async () => {
@@ -42,7 +42,7 @@ test('ensureFolder creates the folder when none is found', async () => {
   assert.equal(id, 'F2');
   assert.equal(fetch.calls[1].method, 'POST');
   assert.ok(fetch.calls[1].url.startsWith(API));
-  assert.deepEqual(JSON.parse(fetch.calls[1].body), { name: 'ACR Utility', mimeType: 'application/vnd.google-apps.folder' });
+  assert.deepEqual(JSON.parse(fetch.calls[1].body), { name: 'ACR Utility - Word and PDF', mimeType: 'application/vnd.google-apps.folder' });
 });
 
 test('upsertFile replaces an existing file and trashes duplicates', async () => {
