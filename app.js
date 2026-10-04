@@ -8,6 +8,7 @@ import { parseDob, dobWords, fieldProblems, migrateDraft } from './acr_fields.js
 import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
 import { generateDocx, ProblemsError } from './docx_engine.js';
+import { acrFileName } from './file_names.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -191,7 +192,7 @@ $('downloadDocxBtn').addEventListener('click',async()=>{
     if(!resp.ok) throw new Error('The Word template could not be loaded.');
     const bytes=new Uint8Array(await resp.arrayBuffer());
     const out=await generateDocx(d,bytes,{JSZip:window.JSZip,DOMParser,XMLSerializer});
-    const name=`ACR_${d.session||'draft'}.docx`;
+    const name=acrFileName(d,'docx');
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
     a.download=name; document.body.appendChild(a); a.click(); a.remove();
