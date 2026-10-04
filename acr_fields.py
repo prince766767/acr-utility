@@ -215,8 +215,12 @@ def part_tables(data):
 
 
 def numbered_lines(text):
-    """Point 12: one line per college, printed "(1) ...", "(2) ..."; a single line, or lines already numbered, stay as typed."""
+    """Point 12: one line per college, printed "(1) College:" with its dates on the next line, as teachers write it.
+    A single college is not numbered; lines the teacher numbered themselves stay as typed."""
     lines = [l.strip() for l in str(text or '').split('\n') if l.strip()]
-    if len(lines) < 2 or any(re.match(r'^\(?\d+[.)]', l) for l in lines):
+    if any(re.match(r'^\(?\d+[.)]', l) for l in lines):
         return str(text or '').strip()
-    return '\n'.join(f'({i}) {l}' for i, l in enumerate(lines, 1))
+    split = lambda l: l.replace(': ', ':\n', 1)
+    if len(lines) == 1:
+        return split(lines[0])
+    return '\n'.join(f'({i}) {split(l)}' for i, l in enumerate(lines, 1))

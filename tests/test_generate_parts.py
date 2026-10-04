@@ -54,7 +54,7 @@ class GenerateParts(unittest.TestCase):
             ('Professional', 'NET'),
             ('Research Degree', 'Ph.D Chemistry'),
             ('In words', 'Fifth November Nineteen Hundred Eighty'),
-            ('College/Colleges in which served', 'Govt College Alpha: 01/04/2031 to 31/03/2032'),
+            ('College/Colleges in which served', 'Govt College Alpha:\n\t01/04/2031 to 31/03/2032'),
             ('Roll no (with session)', 'Roll 12345, 2014'),
             ('b) Hindi subject : Cleared / exempted (mention details)', 'Cleared 2013'),
             ('Any other major assignment', 'Bursar'),

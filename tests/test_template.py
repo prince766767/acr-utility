@@ -386,3 +386,18 @@ class TemplateLongAnswersJustified(unittest.TestCase):
         for tok in ('P19F', 'P21I', 'P23', 'P24_REASONS', 'P25'):
             jc = found[tok].find(qn('w:pPr') + '/' + qn('w:jc'))
             self.assertEqual(jc.get(qn('w:val')) if jc is not None else None, 'both', tok)
+
+
+class TemplatePoint12Column(unittest.TestCase):
+    def test_answer_has_a_tab_stop_at_the_answer_column(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from fix_template_point12_column import point12_paragraph, ANSWER_COLUMN
+        from docx.oxml.ns import qn
+        p = point12_paragraph(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx'))
+        stops = [int(t.get(qn('w:pos'))) for t in p.iter(qn('w:tab')) if t.get(qn('w:pos'))]
+        self.assertEqual(stops, [ANSWER_COLUMN])
+        seq = [ch.tag.split('}')[1] for r in p.findall(qn('w:r')) for ch in r if ch.tag in (qn('w:tab'), qn('w:t'))]
+        texts = [ch.text for r in p.findall(qn('w:r')) for ch in r if ch.tag == qn('w:t')]
+        i = next(k for k, ch in enumerate([c for r in p.findall(qn('w:r')) for c in r if c.tag in (qn('w:tab'), qn('w:t'))]) if ch.tag == qn('w:t') and '{{COLLEGES_SERVED}}' in (ch.text or ''))
+        self.assertEqual(seq[i - 1], 'tab')
+        self.assertEqual(seq[i - 2], 't')

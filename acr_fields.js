@@ -233,9 +233,12 @@ export const ENCLOSURE_DEFAULTS = ['Certificate / sanction order', 'FDP / Orient
   'Paper presentation / publication', 'Research project document', 'Degree / qualification certificate', 'Award / honour certificate',
   'Other supporting document'];
 
-// Point 12: one line per college, printed "(1) …", "(2) …"; a single line, or lines already numbered, stay as typed.
+// Point 12: one line per college, printed "(1) College:" with its dates on the next line, as teachers write it.
+// A single college is not numbered; lines the teacher numbered themselves stay as typed (as numbered_lines in acr_fields.py).
 export function numberedLines(text) {
   const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2 || lines.some(l => /^\(?\d+[.)]/.test(l))) return String(text || '').trim();
-  return lines.map((l, i) => `(${i + 1}) ${l}`).join('\n');
+  if (lines.some(l => /^\(?\d+[.)]/.test(l))) return String(text || '').trim();
+  const split = l => l.replace(': ', ':\n');
+  if (lines.length === 1) return split(lines[0]);
+  return lines.map((l, i) => `(${i + 1}) ${split(l)}`).join('\n');
 }
