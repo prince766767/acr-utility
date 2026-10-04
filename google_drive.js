@@ -67,7 +67,9 @@ export function createTokenSource({ clientId, gis, now = () => Date.now(), signI
     })().finally(() => { pending = null; waiter = null; });
     return pending;
   }
-  return { getToken, preload: () => ready().catch(err => console.warn(err)) };
+  // The token if it is still valid, else null; never opens Google's sign-in (for saves nobody tapped).
+  const current = () => (token && now() < expiresAt - 60000 ? token : null);
+  return { getToken, current, preload: () => ready().catch(err => console.warn(err)) };
 }
 
 const escapeQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
@@ -131,5 +133,13 @@ export function createDrive({ fetch, getToken }) {
     }
   }
 
-  return { ensureFolder, upsertFile, docxToPdf };
+  async function listFiles(folderId, prefix) {
+    return list(`name contains '${escapeQ(prefix)}' and '${escapeQ(folderId)}' in parents and trashed=false`);
+  }
+
+  async function downloadText(fileId) {
+    return (await call(`${API}/${fileId}?alt=media`)).text();
+  }
+
+  return { ensureFolder, upsertFile, docxToPdf, listFiles, downloadText };
 }

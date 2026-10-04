@@ -192,3 +192,28 @@ test('a token without Drive access is refused and not kept', async () => {
   await assert.rejects(src.getToken(), { message: 'Google Drive access was not allowed. Please try again and tick the Google Drive box.' });
   assert.equal(await src.getToken(), 'A');
 });
+
+test('listFiles finds files in the folder whose names start with a prefix', async () => {
+  const fetch = fakeFetch([json({ files: [{ id: 'A', name: 'ACR draft 2025-26.acr.json' }] })]);
+  const out = await createDrive({ fetch, getToken: tokens('T1') }).listFiles('F1', "ACR draft ");
+  assert.deepEqual(out, [{ id: 'A', name: 'ACR draft 2025-26.acr.json' }]);
+  assert.equal(query(fetch.calls[0].url), "name contains 'ACR draft ' and 'F1' in parents and trashed=false");
+});
+
+test('downloadText reads a file\'s content', async () => {
+  const fetch = fakeFetch([new Response('{"a":1}')]);
+  assert.equal(await createDrive({ fetch, getToken: tokens('T1') }).downloadText('A'), '{"a":1}');
+  assert.equal(fetch.calls[0].url, `${API}/A?alt=media`);
+});
+
+test('current() gives the token only while it is valid, and never asks Google', async () => {
+  let t = 1_000_000;
+  const oauth = fakeOauth([{ access_token: 'A', expires_in: 3600 }]);
+  const src = createTokenSource({ clientId: 'CID', gis: async () => oauth, now: () => t });
+  assert.equal(src.current(), null);
+  await src.getToken();
+  assert.equal(src.current(), 'A');
+  t += 3550_000; // within the last minute
+  assert.equal(src.current(), null);
+  assert.equal(oauth.requests.length, 1);
+});

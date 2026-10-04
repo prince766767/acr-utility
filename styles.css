@@ -33,3 +33,7 @@ small.over{color:var(--danger);font-weight:600}
 .style-grid .checkitem{font-weight:600}
 #styleSample{font-family:"Times New Roman",serif}
 @media(max-width:520px){.style-grid{grid-template-columns:1fr}}
+#draftDriveBtn.amber{border-color:#d4a017!important;background:#fff8df!important}
+.sync-dialog{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:16px}
+.sync-dialog.hidden{display:none}
+.sync-box{background:#fff;border-radius:12px;padding:18px;max-width:480px;width:100%;box-shadow:0 8px 24px rgba(0,0,0,.2)}

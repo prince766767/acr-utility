@@ -17,6 +17,7 @@
     </div>
     <div class="top-actions">
       <a id="earlierLink" class="earlier-link" href="v0.4/">Filled your ACR in the earlier version? Open it here</a>
+      <button type="button" id="draftDriveBtn" class="secondary hidden" aria-controls="draftMenu">Keep my draft in Google Drive</button>
       <button type="button" id="styleBtn" class="secondary" aria-expanded="false" aria-controls="stylePanel">Text style</button>
       <button type="button" id="previewBtn">Preview</button>
       <button id="signInBtn" class="secondary hidden">Sign in with Google</button>
@@ -395,6 +396,27 @@
     </div>
   </template>
 
+  <div id="draftMenu" class="style-panel hidden" role="dialog" aria-labelledby="draftMenuTitle">
+    <div class="style-head"><strong id="draftMenuTitle">Draft in Google Drive</strong><button type="button" id="draftMenuClose" class="secondary">Close</button></div>
+    <p id="draftMenuStatus" class="muted"></p>
+    <p class="muted">Your draft is saved in your own Drive folder "ACR Utility - Word and PDF" a few seconds after you stop typing. On another device, open the app and tap "Keep my draft in Google Drive" with the same Google account to continue.</p>
+    <div class="toolbar-buttons">
+      <button type="button" id="draftSaveNow">Save now</button>
+      <button type="button" id="draftCheck" class="secondary">Check Drive for a newer copy</button>
+      <button type="button" id="draftStop" class="secondary">Stop keeping in Drive (on this device)</button>
+    </div>
+  </div>
+  <div id="syncDialog" class="sync-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="syncTitle">
+    <div class="sync-box">
+      <h3 id="syncTitle"></h3>
+      <p id="syncText"></p>
+      <div class="toolbar-buttons">
+        <button type="button" id="syncUseDrive">Use the Drive copy</button>
+        <button type="button" id="syncUseDevice" class="secondary">Keep this device's copy</button>
+      </div>
+      <p class="muted">The copy you don't choose is not deleted: it is kept in your Drive folder as an "other copy" file.</p>
+    </div>
+  </div>
   <div id="stylePanel" class="style-panel hidden" role="dialog" aria-labelledby="styleTitle">
     <div class="style-head"><strong id="styleTitle">Text style for your answers</strong><button type="button" id="styleClose" class="secondary">Close</button></div>
     <p class="muted">Applies to everything you fill in (Word file, Preview, Drive copy and PDF). The form's own printed text stays as on the official form.</p>
