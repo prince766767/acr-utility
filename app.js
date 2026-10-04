@@ -14,6 +14,7 @@ import { loadGis, createTokenSource, createDrive, FOLDER_NAME } from './google_d
 import { shareFiles, downloadFile } from './share.js';
 import { createDraftSync } from './draft_sync.js';
 import { isV04, v04Docs, findV04Docs, convertV04 } from './import_v04.js';
+import { initMarks } from './marks_ui.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -174,6 +175,7 @@ function renderFieldProblems(d){
 // Scores that are counted and totalled take numbers only: cleaned before any other handler sees the value.
 document.addEventListener('input',e=>{const el=e.target; if(!el||!el.dataset) return; const clean='score' in el.dataset?cleanScore:'count' in el.dataset?cleanCount:null; if(clean){const v=clean(el.value); if(v!==el.value) el.value=v;}},true);
 form.addEventListener('input',()=>{clearPendingShare();updateScores();updateDobWords();saveLocal();});
+initMarks(document);
 form.addEventListener('change',()=>{updateScores();saveLocal();});
 $('saveBtn').addEventListener('click',async()=>{try{if(firebaseReady&&currentUser)await saveCloud();else{saveLocal();$('syncStatus').textContent='Draft saved locally.';}}catch(err){console.error(err);$('syncStatus').textContent='Saved locally; cloud sync failed, so no work was lost.';}});
 $('exportBtn').addEventListener('click',()=>{const data=saveLocal();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`ACR_${data.session||'draft'}.acr.json`;a.click();URL.revokeObjectURL(a.href);});

@@ -242,3 +242,39 @@ export function numberedLines(text) {
   if (lines.length === 1) return split(lines[0]);
   return lines.map((l, i) => `(${i + 1}) ${split(l)}`).join('\n');
 }
+
+// Answers may mark **bold**, *italic* and ^superscript^ (the B / I / x² buttons). Returns [[text, letters b, i, s]].
+// A mark counts only when closed on the same line with no space just inside it, so "5 * 3" and a lone "*" stay as typed.
+// Same rules as inline_marks in acr_fields.py; both are checked against tests/fixtures/mark_cases.json.
+const MARKS = [['**', 'b'], ['*', 'i'], ['^', 's']];
+const SPACE = ' \t\u00a0';
+export function inlineMarks(text) {
+  const out = [];
+  const add = (s, fmt) => {
+    if (!s) return;
+    if (out.length && out[out.length - 1][1] === fmt) out[out.length - 1][0] += s;
+    else out.push([s, fmt]);
+  };
+  const walk = (s, fmt) => {
+    let buf = '', i = 0;
+    outer: while (i < s.length) {
+      for (const [mark, f] of MARKS) {
+        if (!s.startsWith(mark, i)) continue;
+        const j = s.indexOf(mark, i + mark.length);
+        const inner = j > 0 ? s.slice(i + mark.length, j) : '';
+        if (inner && !SPACE.includes(inner[0]) && !SPACE.includes(inner[inner.length - 1]) && !fmt.includes(f)) {
+          add(buf, fmt);
+          buf = '';
+          walk(inner, (fmt + f).split('').sort().join(''));
+          i = j + mark.length;
+          continue outer;
+        }
+      }
+      buf += s[i];
+      i += 1;
+    }
+    add(buf, fmt);
+  };
+  String(text).split('\n').forEach((line, n) => { if (n) add('\n', ''); walk(line, ''); });
+  return out;
+}

@@ -2,7 +2,7 @@
 // (spec docs/superpowers/specs/2026-09-27-word-file-in-app-design.md). It follows python-docx 1.2's rules for cells,
 // text and run properties so that tests/test_parity.py finds the two files identical. Change both together.
 import { tally, toCents, fmt, isEmptyEntry, lastYearProblems, lastYearCells, LEVEL_TEXT, scoreText } from './api_tally.js';
-import { fieldProblems, tokenValues, partTables, TITLES, RELATIONS } from './acr_fields.js';
+import { fieldProblems, tokenValues, partTables, inlineMarks, TITLES, RELATIONS } from './acr_fields.js';
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 const XML_NS = 'http://www.w3.org/XML/1998/namespace';
@@ -433,6 +433,31 @@ function strikeUnchosen(doc, startsWith, options, chosen) {
   throw new Error(`Template: no line starting with "${startsWith}".`);
 }
 
+// Answers (blue runs) marked **bold**, *italic* or ^superscript^: split into runs with that formatting (as apply_inline_marks).
+function applyInlineMarks(doc) {
+  const kinds = { t: null, tab: '\t', br: '\n' };
+  for (const r of all(doc.body, 'r')) {
+    const c = kid(kid(r, 'rPr'), 'color');
+    if (!c || (wGet(c, 'val') || '').toUpperCase() !== BLUE) continue;
+    const content = Array.from(r.childNodes).filter(n => n.nodeType === 1 && !isW(n, 'rPr'));
+    if (content.some(n => n.namespaceURI !== W || !has(kinds, n.localName))) continue;
+    const text = content.map(n => (n.localName === 't' ? n.textContent : kinds[n.localName])).join('');
+    if (!text.includes('*') && !text.includes('^')) continue;
+    const segs = inlineMarks(text);
+    if (segs.every(([, fmt]) => !fmt)) continue;
+    for (const [s, fmt] of segs) {
+      const nr = r.cloneNode(true);
+      const rpr = getOrAddRPr(nr);
+      if (fmt.includes('b')) { setOn(rpr, 'b'); setOn(rpr, 'bCs'); }
+      if (fmt.includes('i')) { setOn(rpr, 'i'); setOn(rpr, 'iCs'); }
+      if (fmt.includes('s')) wSet(getOrAdd(rpr, 'vertAlign', RPR_ORDER), 'val', 'superscript');
+      setRunText(nr, s);
+      r.parentNode.insertBefore(nr, r);
+    }
+    r.parentNode.removeChild(r);
+  }
+}
+
 // Point 12: every further line of the answer starts with a TAB, so it lands on the answer-column tab stop (as indent_point12).
 function indentPoint12(doc) {
   for (const p of all(doc.body, 'p')) {
@@ -516,6 +541,7 @@ export async function generateDocx(data, templateBytes, { JSZip, DOMParser, XMLS
   replaceTokens(xml, tokenValues(data));
   indentPoint12(doc);
   insertEnclosures(doc, data);
+  applyInlineMarks(doc);
   applyTextStyle(xml, data.style);
   let out = new XMLSerializer().serializeToString(xml);
   if (!out.startsWith('<?xml')) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + out;

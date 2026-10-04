@@ -224,3 +224,46 @@ def numbered_lines(text):
     if len(lines) == 1:
         return split(lines[0])
     return '\n'.join(f'({i}) {split(l)}' for i, l in enumerate(lines, 1))
+
+
+_MARKS = (('**', 'b'), ('*', 'i'), ('^', 's'))
+_SPACE = ' \t\u00a0'
+
+
+def inline_marks(text):
+    """Answers may mark **bold**, *italic* and ^superscript^ (the B / I / x² buttons). Returns [(text, letters b, i, s)].
+    A mark counts only when closed on the same line with no space just inside it, so "5 * 3" and a lone "*" stay as typed.
+    Same rules as inlineMarks in acr_fields.js; both are checked against tests/fixtures/mark_cases.json."""
+    out = []
+
+    def add(s, fmt):
+        if not s:
+            return
+        if out and out[-1][1] == fmt:
+            out[-1] = (out[-1][0] + s, fmt)
+        else:
+            out.append((s, fmt))
+
+    def walk(s, fmt):
+        buf, i = '', 0
+        while i < len(s):
+            for mark, f in _MARKS:
+                if s.startswith(mark, i):
+                    j = s.find(mark, i + len(mark))
+                    inner = s[i + len(mark):j] if j > 0 else ''
+                    if inner and inner[0] not in _SPACE and inner[-1] not in _SPACE and f not in fmt:
+                        add(buf, fmt)
+                        buf = ''
+                        walk(inner, ''.join(sorted(fmt + f)))
+                        i = j + len(mark)
+                        break
+            else:
+                buf += s[i]
+                i += 1
+        add(buf, fmt)
+
+    for n, line in enumerate(str(text).split('\n')):
+        if n:
+            add('\n', '')
+        walk(line, '')
+    return out

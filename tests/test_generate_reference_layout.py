@@ -88,3 +88,28 @@ class Point12Lines(unittest.TestCase):
         # one TAB to the answer column, then BR + TAB before each of the 3 further lines (the template's own TAB follows)
         self.assertEqual(seq[:7], ['tab'] + ['br', 'tab'] * 3)
         self.assertIn('(1) College A:', text(p))
+
+
+class InlineMarks(unittest.TestCase):
+    def runs_of(self, doc, starts):
+        p = next(p for p in doc.element.body.iter(qn('w:p')) if starts in text(p))
+        out = []
+        for r in p.findall(qn('w:r')):
+            rpr, t = r.find(qn('w:rPr')), text(r)
+            if t:
+                out.append((t, rpr.find(qn('w:b')) is not None, rpr.find(qn('w:i')) is not None,
+                            rpr.find(qn('w:vertAlign')) is not None))
+        return out
+
+    def test_bold_italic_superscript_become_runs(self):
+        doc = make(lambda d: d['part2'].update(p17='Taught **Botany** to the 3^rd^ semester, *Biodiversity* too'))
+        runs = self.runs_of(doc, 'Taught ')
+        self.assertIn(('Botany', True, False, False), runs)
+        self.assertIn(('rd', False, False, True), runs)
+        self.assertIn(('Biodiversity', False, True, False), runs)
+        self.assertNotIn('*', ''.join(t for t, *_ in runs))
+        self.assertNotIn('^', ''.join(t for t, *_ in runs))
+
+    def test_template_stars_untouched(self):
+        doc = make(lambda d: None)
+        self.assertIn('****************************', ''.join(text(p) for p in doc.element.body.iter(qn('w:p'))))

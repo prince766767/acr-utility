@@ -107,10 +107,10 @@
           <h2>Part I — Personal Data (Points 1–16)</h2>
           <div class="grid two">
             <label>8. Date of Promotion / “No promotion”<input name="p8"></label>
-            <label>12. Colleges served during the year<textarea name="p12" rows="3" placeholder="One line per college, e.g.&#10;Govt. College Sarkaghat: May 06, 2021 to June 18, 2022&#10;Govt. College Bhoranj: June 18, 2022 to till date"></textarea></label>
-            <label>13(a). Departmental Exam details<textarea name="p13a" rows="2"></textarea></label>
-            <label>13(b). Hindi subject details<textarea name="p13b" rows="2"></textarea></label>
-            <label class="full">14. Other major assignment<textarea name="p14" rows="3"></textarea></label>
+            <label>12. Colleges served during the year<textarea name="p12" data-marks rows="3" placeholder="One line per college, e.g.&#10;Govt. College Sarkaghat: May 06, 2021 to June 18, 2022&#10;Govt. College Bhoranj: June 18, 2022 to till date"></textarea></label>
+            <label>13(a). Departmental Exam details<textarea name="p13a" data-marks rows="2"></textarea></label>
+            <label>13(b). Hindi subject details<textarea name="p13b" data-marks rows="2"></textarea></label>
+            <label class="full">14. Other major assignment<textarea name="p14" data-marks rows="3"></textarea></label>
           </div>
         </div>
       </section>
@@ -119,13 +119,13 @@
         <div class="card">
           <h2>Part II — Section I: Self Appraisal (17–25)</h2>
           <p id="partLegacyNotice" class="warning hidden"></p>
-          <label>17. Most important contribution this year<textarea name="p17" rows="5"></textarea></label>
-          <label>18. Contribution in work not assigned to you<textarea name="p18" rows="4"></textarea></label>
-          <label>19(b). Special effort to improve classroom instruction<textarea name="p19b" rows="4"></textarea></label>
+          <label>17. Most important contribution this year<textarea name="p17" data-marks rows="5"></textarea></label>
+          <label>18. Contribution in work not assigned to you<textarea name="p18" data-marks rows="4"></textarea></label>
+          <label>19(b). Special effort to improve classroom instruction<textarea name="p19b" data-marks rows="4"></textarea></label>
           <div class="section-heading"><div><h3>19(d). Academic activities organised in the college</h3></div><button type="button" class="secondary" data-add="activities">+ Add Activity</button></div>
           <div id="activityRows" class="repeatable"></div>
-          <label>19(f). New books relating to subject + brief extract<textarea name="p19f" rows="5"></textarea></label>
-          <label>19(g). Vital teaching problems in order of importance<textarea name="p19g" rows="5"></textarea></label>
+          <label>19(f). New books relating to subject + brief extract<textarea name="p19f" data-marks rows="5"></textarea></label>
+          <label>19(g). Vital teaching problems in order of importance<textarea name="p19g" data-marks rows="5"></textarea></label>
         </div>
 
         <div class="card">
@@ -155,7 +155,7 @@
 
         <div class="card">
           <h3>21. Academic / Professional Qualifications & Courses</h3>
-          <label>21(i). Degrees / fresh qualifications<textarea name="p21i" rows="4"></textarea></label>
+          <label>21(i). Degrees / fresh qualifications<textarea name="p21i" data-marks rows="4"></textarea></label>
           <div class="section-heading"><div><h4>21(ii). Orientation / Refresher Course / Summer School attended during the year</h4></div><button type="button" class="secondary" data-add="orientation">+ Add Course</button></div>
           <div id="orientationRows" class="repeatable"></div>
         </div>
@@ -168,10 +168,10 @@
         </div>
 
         <div class="card">
-          <label>23. Honours / Prizes / Awards<textarea name="p23" rows="3"></textarea></label>
+          <label>23. Honours / Prizes / Awards<textarea name="p23" data-marks rows="3"></textarea></label>
           <label>24. Are you satisfied with your present position / pay?<select name="p24Satisfied"><option value="">— choose —</option><option>Yes</option><option>No</option></select></label>
-          <label>24. If not, do you want to change the profession? Give reasons.<textarea name="p24Reasons" rows="3"></textarea></label>
-          <label>25. Other significant point<textarea name="p25" rows="4"></textarea></label>
+          <label>24. If not, do you want to change the profession? Give reasons.<textarea name="p24Reasons" data-marks rows="3"></textarea></label>
+          <label>25. Other significant point<textarea name="p25" data-marks rows="4"></textarea></label>
         </div>
       </section>
 
@@ -349,7 +349,7 @@
   <template id="activityTemplate">
     <div class="repeat-row">
       <div><label>Title of the activity<input data-key="title"></label></div>
-      <div><label>Brief detail of activity<textarea data-key="detail" rows="2"></textarea></label></div>
+      <div><label>Brief detail of activity<textarea data-key="detail" data-marks rows="2"></textarea></label></div>
       <button type="button" class="danger remove-row">Remove</button>
     </div>
   </template>
@@ -376,7 +376,7 @@
 
   <template id="otherInfoTemplate">
     <div class="repeat-row">
-      <div><label>Credential / contribution / award<textarea data-key="text" rows="2"></textarea></label></div>
+      <div><label>Credential / contribution / award<textarea data-key="text" data-marks rows="2"></textarea></label></div>
       <button type="button" class="danger remove-row">Remove</button>
     </div>
   </template>

@@ -53,3 +53,8 @@ test('point 12: one line per college is numbered (1), (2) ...; a single line or 
   assert.equal(tokenValues({ part2: { p12: 'Govt College Alpha' } }).COLLEGES_SERVED, 'Govt College Alpha');
   assert.equal(tokenValues({ part2: { p12: '1. College A\n2. College B' } }).COLLEGES_SERVED, '1. College A\n2. College B');
 });
+
+import { inlineMarks } from '../acr_fields.js';
+for (const [text, expected] of JSON.parse(readFileSync(new URL('./fixtures/mark_cases.json', import.meta.url), 'utf8'))) {
+  test(`marks ${JSON.stringify(text)}`, () => assert.deepStrictEqual(inlineMarks(text), expected));
+}

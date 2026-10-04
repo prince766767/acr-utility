@@ -44,7 +44,15 @@ def records():
     no_title['profile']['relation'] = ''
     styled = copy(FULL)
     styled['style'] = {'chosen': True, 'color': '1F3864', 'font': 'Georgia', 'size': 12, 'bold': True, 'italic': True}
-    return {'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'styled': styled, 'empty': {}}
+    marked = copy(FULL)
+    marked['part2']['p17'] = 'Taught **Botany** to the 3^rd^ semester\n*Biodiversity:* field work, 5 * 3 groups'
+    marked['part2']['p25'] = '**Plan:** *new course*\tnext ^year^'
+    marked['part2']['p12'] = 'Govt College *Alpha*: 2021 to date'
+    marked['activities'] = [{'title': '**Quiz**', 'detail': 'held in the 2^nd^ term'}]
+    marked_styled = copy(marked)
+    marked_styled['style'] = {'chosen': True, 'color': '1E5631', 'bold': True}
+    return {'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'styled': styled, 'empty': {},
+            'marked': marked, 'marked_styled': marked_styled}
 
 
 def run_text(r):
@@ -67,8 +75,9 @@ def run_props(r):
     def onoff(tag):
         e = el(tag)
         return None if e is None else e.get(qn('w:val')) not in ('0', 'false')
-    c, f, s = el('w:color'), el('w:rFonts'), el('w:sz')
-    return (c.get(qn('w:val')) if c is not None else None, onoff('w:b'), onoff('w:i'), onoff('w:strike'),
+    c, f, s, v = el('w:color'), el('w:rFonts'), el('w:sz'), el('w:vertAlign')
+    return (c.get(qn('w:val')) if c is not None else None, onoff('w:b'), onoff('w:bCs'), onoff('w:i'), onoff('w:iCs'), onoff('w:strike'),
+            v.get(qn('w:val')) if v is not None else None,
             f.get(qn('w:ascii')) if f is not None else None, s.get(qn('w:val')) if s is not None else None)
 
 
