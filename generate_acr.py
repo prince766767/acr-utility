@@ -406,6 +406,17 @@ def strike_unchosen(doc, starts_with, options, chosen):
     raise RuntimeError(f'Template: no line starting with "{starts_with}".')
 
 
+def indent_point12(doc):
+    """Point 12: every further line of the answer starts with a TAB, so it lands on the answer-column tab stop."""
+    for p in doc.element.body.iter(qn('w:p')):
+        if ''.join(x.text or '' for x in p.iter(qn('w:t'))).startswith('College/Colleges in which served'):
+            for br in list(p.iter(qn('w:br'))):
+                if br.get(qn('w:type')) in (None, 'textWrapping'):
+                    br.addnext(etree.Element(W+'tab'))
+            return
+    raise RuntimeError('Template: no line starting with "College/Colleges in which served".')
+
+
 def generate(data,out_docx):
     api=data.get('api') if isinstance(data.get('api'),dict) else {}
     result=tally(api)
@@ -426,6 +437,7 @@ def generate(data,out_docx):
     tmp.unlink(missing_ok=True)
     # Enclosures: the checked items, numbered, just before the teacher's certificate.
     doc=Document(out_docx)
+    indent_point12(doc)
     selected=[x.get('label') for x in data.get('enclosures',[]) if isinstance(x,dict) and x.get('checked',True)]
     if selected:
         insert_at=None

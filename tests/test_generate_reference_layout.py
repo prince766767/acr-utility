@@ -78,3 +78,13 @@ class NilForEmptyParts(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Point12Lines(unittest.TestCase):
+    def test_each_further_line_starts_with_a_tab(self):
+        doc = make(lambda d: d.setdefault('part2', {}).update(p12='College A: 2021 to 2022\nCollege B: 2022 to date'))
+        p = next(p for p in doc.element.body.iter(qn('w:p')) if text(p).startswith('College/Colleges in which served'))
+        seq = [c.tag.split('}')[1] for r in p.findall(qn('w:r')) for c in r if c.tag in (qn('w:br'), qn('w:tab'))]
+        # one TAB to the answer column, then BR + TAB before each of the 3 further lines (the template's own TAB follows)
+        self.assertEqual(seq[:7], ['tab'] + ['br', 'tab'] * 3)
+        self.assertIn('(1) College A:', text(p))

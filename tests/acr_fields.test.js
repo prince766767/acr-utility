@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseDob, dobWords, fieldProblems, migrateDraft } from '../acr_fields.js';
+import { tokenValues } from '../acr_fields.js';
 
 const CASES = JSON.parse(readFileSync(new URL('./fixtures/field_cases.json', import.meta.url), 'utf8'));
 
@@ -43,4 +44,12 @@ test('migrateDraft on a new-style draft changes nothing', () => {
   const { data, notices } = migrateDraft({ part2: { p17: 'a' }, research: [], activities: [{ title: 'x' }] });
   assert.deepStrictEqual(notices, []);
   assert.deepStrictEqual(data.activities, [{ title: 'x' }]);
+});
+
+test('point 12: one line per college is numbered (1), (2) ...; a single line or own numbers stay as typed', () => {
+  assert.equal(tokenValues({ part2: { p12: 'Govt. College Sarkaghat: May 06, 2021 to June 18, 2022\n\n Govt. College Bhoranj: June 18, 2022 to till date ' } }).COLLEGES_SERVED,
+    '(1) Govt. College Sarkaghat:\nMay 06, 2021 to June 18, 2022\n(2) Govt. College Bhoranj:\nJune 18, 2022 to till date');
+  assert.equal(tokenValues({ part2: { p12: 'Govt College Alpha: 01/04/2031 to 31/03/2032' } }).COLLEGES_SERVED, 'Govt College Alpha:\n01/04/2031 to 31/03/2032');
+  assert.equal(tokenValues({ part2: { p12: 'Govt College Alpha' } }).COLLEGES_SERVED, 'Govt College Alpha');
+  assert.equal(tokenValues({ part2: { p12: '1. College A\n2. College B' } }).COLLEGES_SERVED, '1. College A\n2. College B');
 });

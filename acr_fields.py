@@ -154,7 +154,7 @@ def token_values(data):
         'RESEARCH_DEGREE': _s(p.get('researchDegree')),
         'DOB_WORDS': dob_words(*dob) if state == 'ok' else '',
         'SERVICE_STATUS': _s(p.get('serviceStatus')),
-        'COLLEGES_SERVED': _s(a.get('p12')),
+        'COLLEGES_SERVED': numbered_lines(_s(a.get('p12'))),
         'DEPT_EXAM': _s(a.get('p13a')),
         'HINDI_DETAILS': _s(a.get('p13b')),
         'OTHER_ASSIGNMENT': _s(a.get('p14')),
@@ -212,3 +212,15 @@ def part_tables(data):
         'research': [[_s(e.get(k)) for k in ('title', 'institution', 'nature', 'status')] for e in _rows(data, 'research')],
         'other_info': [[str(i), _s(e.get('text'))] for i, e in enumerate(_rows(data, 'otherInfo'), 1)],
     }
+
+
+def numbered_lines(text):
+    """Point 12: one line per college, printed "(1) College:" with its dates on the next line, as teachers write it.
+    A single college is not numbered; lines the teacher numbered themselves stay as typed."""
+    lines = [l.strip() for l in str(text or '').split('\n') if l.strip()]
+    if any(re.match(r'^\(?\d+[.)]', l) for l in lines):
+        return str(text or '').strip()
+    split = lambda l: l.replace(': ', ':\n', 1)
+    if len(lines) == 1:
+        return split(lines[0])
+    return '\n'.join(f'({i}) {split(l)}' for i, l in enumerate(lines, 1))

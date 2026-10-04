@@ -433,6 +433,19 @@ function strikeUnchosen(doc, startsWith, options, chosen) {
   throw new Error(`Template: no line starting with "${startsWith}".`);
 }
 
+// Point 12: every further line of the answer starts with a TAB, so it lands on the answer-column tab stop (as indent_point12).
+function indentPoint12(doc) {
+  for (const p of all(doc.body, 'p')) {
+    if (!deepText(p).startsWith('College/Colleges in which served')) continue;
+    for (const br of all(p, 'br')) {
+      const type = wGet(br, 'type');
+      if (type === null || type === 'textWrapping') insertAfter(br, wEl(doc.xml, 'tab'));
+    }
+    return;
+  }
+  throw new Error('Template: no line starting with "College/Colleges in which served".');
+}
+
 function replaceTokens(xml, values) {
   const map = Object.entries(values).map(([k, v]) => ['{{' + k + '}}', String(v || '')]);
   const root = xml.documentElement;
@@ -501,6 +514,7 @@ export async function generateDocx(data, templateBytes, { JSZip, DOMParser, XMLS
   strikeUnchosen(doc, 'Father/Husband', RELATIONS, profile.relation);
   fillApiTables(doc, api, v);
   replaceTokens(xml, tokenValues(data));
+  indentPoint12(doc);
   insertEnclosures(doc, data);
   applyTextStyle(xml, data.style);
   let out = new XMLSerializer().serializeToString(xml);
