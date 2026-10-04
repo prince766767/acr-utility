@@ -158,9 +158,11 @@ function updateDobWords(){
   el.textContent=r.state==='ok'?`In words: ${dobWords(r)}`:(r.state==='bad'?'Not a real date — use DD/MM/YYYY':'');
   el.classList.toggle('over',r.state==='bad');
 }
+// Everything that stops the Word file from being made (same rules as generateDocx).
+function docxProblems(d){return [...fieldProblems(d),...tally(d.api).problems,...lastYearProblems(d.api.lastAcademicYear)];}
 function renderFieldProblems(d){
   const ul=$('reviewProblems'); ul.innerHTML='';
-  const probs=[...fieldProblems(d),...tally(d.api).problems,...lastYearProblems(d.api.lastAcademicYear)];
+  const probs=docxProblems(d);
   if(!lastYearCells(d.api.lastAcademicYear).cat1&&!lastYearProblems(d.api.lastAcademicYear).length){const w=document.createElement('li');w.className='warn';w.textContent='Last academic year figures are not filled in.';ul.appendChild(w);}
   docxBlocked=probs.length>0; syncDocxButtons(); $('docxReason').textContent=probs.length?'Fix the problems listed above first.':'';
   if(!probs.length){const li=document.createElement('li');li.className='ok';li.textContent='No problems. The ACR can be generated.';ul.appendChild(li);return;}
@@ -256,6 +258,27 @@ $('driveBtn').addEventListener('click',()=>runDocxJob(async say=>{
   const a=document.createElement('a'); a.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`; a.target='_blank'; a.rel='noopener'; a.textContent=`Open the "${FOLDER_NAME}" folder`;
   p.append(a); return p;
 }));
+
+// Preview: the same Word file as Download, drawn as HTML pages by docx-preview (vendor/), from any tab.
+// Headers/footers are left out: docx-preview can't work out page numbers.
+async function openPreview(){
+  const panel=$('previewPanel'), pages=$('previewPages'), status=$('previewStatus');
+  pages.replaceChildren(); $('previewProblems').classList.add('hidden'); panel.classList.remove('hidden'); document.body.style.overflow='hidden';
+  const d=saveLocal(), probs=docxProblems(d);
+  if(probs.length){
+    status.textContent='';
+    $('previewProblemList').replaceChildren(...probs.map(p=>{const li=document.createElement('li');li.textContent=p.message;return li;}));
+    $('previewProblems').classList.remove('hidden'); return;
+  }
+  status.textContent='Making the preview…';
+  try{const docx=await makeDocx(d); await window.docx.renderAsync(docx,pages,null,{inWrapper:true,breakPages:true,ignoreLastRenderedPageBreak:true,renderHeaders:false,renderFooters:false}); status.textContent='';}
+  catch(err){console.error(err); status.textContent=`The preview could not be shown: ${errText(err)}`;}
+}
+function closePreview(){$('previewPanel').classList.add('hidden'); $('previewPages').replaceChildren(); document.body.style.overflow='';}
+$('previewBtn').addEventListener('click',openPreview);
+$('previewClose').addEventListener('click',closePreview);
+$('previewToReview').addEventListener('click',()=>{closePreview(); document.querySelector('.tabs button[data-section="review"]').click();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('previewPanel').classList.contains('hidden'))closePreview();});
 
 if(googleReady){for(const id of ['shareBtn','driveBtn','googleRouteHelp'])$(id).classList.remove('hidden'); googleTokens.preload();}
 

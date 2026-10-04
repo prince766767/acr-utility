@@ -17,6 +17,7 @@
     </div>
     <div class="top-actions">
       <a id="earlierLink" class="earlier-link" href="v0.4/">Filled your ACR in the earlier version? Open it here</a>
+      <button type="button" id="previewBtn">Preview</button>
       <button id="signInBtn" class="secondary hidden">Sign in with Google</button>
       <button id="signOutBtn" class="secondary hidden">Sign out</button>
     </div>
@@ -393,7 +394,21 @@
     </div>
   </template>
 
+  <div id="previewPanel" class="preview-panel hidden" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+    <div class="preview-bar">
+      <div><strong id="previewTitle">Preview</strong> <span class="muted">– the downloaded Word file is what counts; this view can differ slightly.</span></div>
+      <button type="button" id="previewClose" class="secondary">Close</button>
+    </div>
+    <p id="previewStatus" class="muted" role="status"></p>
+    <div id="previewProblems" class="hidden">
+      <p>The Word file can't be made yet. Fix these first:</p>
+      <ul id="previewProblemList" class="problems"></ul>
+      <button type="button" id="previewToReview">Go to Review</button>
+    </div>
+    <div id="previewPages"></div>
+  </div>
   <script src="vendor/jszip.min.js"></script>
+  <script src="vendor/docx-preview.min.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

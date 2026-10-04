@@ -22,3 +22,8 @@ small.over{color:var(--danger);font-weight:600}
 #shareNowBtn{margin-top:4px}
 .earlier-link{align-self:center;color:var(--blue);font-size:.9rem}
 [hidden]{display:none!important}
+.preview-panel{position:fixed;inset:0;z-index:20;background:#e9ecef;overflow:auto}
+.preview-bar{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--line)}
+#previewStatus,#previewProblems{padding:0 16px}
+#previewPages{position:relative;z-index:0}
+#previewPages .docx-wrapper{background:#e9ecef;padding:16px}
