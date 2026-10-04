@@ -355,5 +355,23 @@ class TemplatePart3SignatureGap(unittest.TestCase):
             sp = body[k + 1].find(qn('w:pPr') + '/' + qn('w:spacing'))
             self.assertEqual((sp.get(qn('w:before')), sp.get(qn('w:line')), sp.get(qn('w:lineRule'))), ('0', '134', 'exact'), start)
 
+
+class TemplatePage1Fits(unittest.TestCase):
+    """Point 16 stays on page 1 in Google Docs too; see tools/fix_template_google_page1.py."""
+    def test_gaps_before_13_and_14_are_shrunk(self):
+        from docx.oxml.ns import qn
+        body = list(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body)
+        t = lambda e: ' '.join(''.join(x.text or '' for x in e.iter(qn('w:t'))).split())
+        minimal = lambda p: (p.find(qn('w:pPr') + '/' + qn('w:spacing')) is not None
+                             and p.find(qn('w:pPr') + '/' + qn('w:spacing')).get(qn('w:line')) == '20')
+        k13 = next(k for k, e in enumerate(body) if t(e).startswith('a) Roll no (with session)'))
+        self.assertEqual([t(body[k]) for k in range(k13 - 3, k13)], ['', '', ''])
+        self.assertEqual([minimal(body[k]) for k in range(k13 - 3, k13)], [False, True, True])
+        k14 = next(k for k, e in enumerate(body) if t(e).startswith('Any other major assignment in addition to Tea'))
+        self.assertEqual(t(body[k14 - 1]), '')
+        self.assertTrue(minimal(body[k14 - 1]))
+        part2 = next(e for e in body if t(e).startswith('PART-II: SECTION-I'))
+        self.assertIsNotNone(part2.find(qn('w:pPr') + '/' + qn('w:pageBreakBefore')))
+
 if __name__ == '__main__':
     unittest.main()
