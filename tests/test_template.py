@@ -209,5 +209,68 @@ class TemplateAppendixPages(unittest.TestCase):
         self.assertAlmostEqual(doc.sections[-1].page_width.inches, 8.27, places=2)
         self.assertEqual(doc.sections[-1].left_margin, 0)
 
+
+class TemplateGoogleDocsBreaks(unittest.TestCase):
+    """Google Docs (used to make the PDF) turns some Word page breaks into blank pages; see tools/fix_template_google_breaks.py."""
+    @classmethod
+    def setUpClass(cls):
+        from docx.oxml.ns import qn
+        cls.qn = staticmethod(qn)
+        cls.paras = [el for el in Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body if el.tag == qn('w:p')]
+
+    def page_break_sections(self):
+        qn = self.qn
+        for i, p in enumerate(self.paras):
+            sect = p.find(qn('w:pPr') + '/' + qn('w:sectPr'))
+            if sect is None:
+                continue
+            kind = sect.find(qn('w:type'))
+            if kind is None or kind.get(qn('w:val')) != 'continuous':
+                yield i, p
+
+    def test_no_new_page_setting_right_after_a_section_break(self):
+        qn = self.qn
+        for i, _ in self.page_break_sections():
+            if i + 1 < len(self.paras):
+                self.assertIsNone(self.paras[i + 1].find(qn('w:pPr') + '/' + qn('w:pageBreakBefore')), i)
+
+    def test_empty_section_break_paragraphs_are_minimal(self):
+        qn = self.qn
+        seen = 0
+        for i, p in self.page_break_sections():
+            if ''.join(t.text or '' for t in p.iter(qn('w:t'))).strip():
+                continue
+            seen += 1
+            spacing = p.find(qn('w:pPr') + '/' + qn('w:spacing'))
+            self.assertIsNotNone(spacing, i)
+            self.assertEqual((spacing.get(qn('w:before')), spacing.get(qn('w:after')), spacing.get(qn('w:line')), spacing.get(qn('w:lineRule'))), ('0', '0', '20', 'exact'), i)
+            sz = p.find(qn('w:pPr') + '/' + qn('w:rPr') + '/' + qn('w:sz'))
+            self.assertEqual(sz.get(qn('w:val')) if sz is not None else None, '2', i)
+        self.assertGreater(seen, 10)
+
+    def test_spacer_at_bottom_of_part3_page_is_minimal(self):
+        # the page ending with point 34(d) "...Just good enough."; spacer(s) between it and its section break
+        qn = self.qn
+        texts = [''.join(t.text or '' for t in p.iter(qn('w:t'))) for p in self.paras]
+        def ends_page(k):  # only empty paragraphs between it and a section break
+            j = k + 1
+            while self.paras[j].find(qn('w:pPr') + '/' + qn('w:sectPr')) is None:
+                if texts[j].strip() or self.paras[j].getnext() is not self.paras[j + 1]:
+                    return False
+                j += 1
+            return True
+        hits = [k for k, t in enumerate(texts) if t.strip().startswith('Just good enough.') and ends_page(k)]
+        self.assertEqual(len(hits), 1)
+        i = hits[0]
+        j = i + 1
+        spacers = 0
+        while self.paras[j].find(qn('w:pPr') + '/' + qn('w:sectPr')) is None:
+            self.assertFalse(texts[j].strip(), j)
+            spacing = self.paras[j].find(qn('w:pPr') + '/' + qn('w:spacing'))
+            self.assertEqual((spacing.get(qn('w:line')), spacing.get(qn('w:lineRule'))) if spacing is not None else None, ('20', 'exact'), j)
+            spacers += 1
+            j += 1
+        self.assertGreaterEqual(spacers, 1)
+
 if __name__ == '__main__':
     unittest.main()
