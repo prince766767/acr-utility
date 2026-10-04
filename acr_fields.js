@@ -173,7 +173,7 @@ export function tokenValues(data) {
     RESEARCH_DEGREE: s(p.researchDegree),
     DOB_WORDS: dob.state === 'ok' ? dobWords(dob) : '',
     SERVICE_STATUS: s(p.serviceStatus),
-    COLLEGES_SERVED: s(a.p12),
+    COLLEGES_SERVED: numberedLines(s(a.p12)),
     DEPT_EXAM: s(a.p13a),
     HINDI_DETAILS: s(a.p13b),
     OTHER_ASSIGNMENT: s(a.p14),
@@ -232,3 +232,10 @@ export function partTables(data) {
 export const ENCLOSURE_DEFAULTS = ['Certificate / sanction order', 'FDP / Orientation / Refresher certificate', 'Conference / seminar certificate',
   'Paper presentation / publication', 'Research project document', 'Degree / qualification certificate', 'Award / honour certificate',
   'Other supporting document'];
+
+// Point 12: one line per college, printed "(1) …", "(2) …"; a single line, or lines already numbered, stay as typed.
+export function numberedLines(text) {
+  const lines = String(text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2 || lines.some(l => /^\(?\d+[.)]/.test(l))) return String(text || '').trim();
+  return lines.map((l, i) => `(${i + 1}) ${l}`).join('\n');
+}

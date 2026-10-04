@@ -375,3 +375,14 @@ class TemplatePage1Fits(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TemplateLongAnswersJustified(unittest.TestCase):
+    def test_long_answers_are_justified(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from fix_template_justify_answers import answer_paragraphs
+        from docx.oxml.ns import qn
+        found = answer_paragraphs(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx'))
+        for tok in ('P19F', 'P21I', 'P23', 'P24_REASONS', 'P25'):
+            jc = found[tok].find(qn('w:pPr') + '/' + qn('w:jc'))
+            self.assertEqual(jc.get(qn('w:val')) if jc is not None else None, 'both', tok)

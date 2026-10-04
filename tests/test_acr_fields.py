@@ -96,3 +96,13 @@ class Tables(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CollegesServedNumbered(unittest.TestCase):
+    def test_one_line_per_college_is_numbered(self):
+        v = token_values({'part2': {'p12': 'Govt. College Sarkaghat: May 06, 2021 to June 18, 2022\n\n Govt. College Bhoranj: June 18, 2022 to till date '}})
+        self.assertEqual(v['COLLEGES_SERVED'], '(1) Govt. College Sarkaghat: May 06, 2021 to June 18, 2022\n(2) Govt. College Bhoranj: June 18, 2022 to till date')
+
+    def test_single_line_or_own_numbers_stay_as_typed(self):
+        self.assertEqual(token_values({'part2': {'p12': 'Govt College Alpha: 01/04/2031 to 31/03/2032'}})['COLLEGES_SERVED'], 'Govt College Alpha: 01/04/2031 to 31/03/2032')
+        self.assertEqual(token_values({'part2': {'p12': '1. College A\n2. College B'}})['COLLEGES_SERVED'], '1. College A\n2. College B')
