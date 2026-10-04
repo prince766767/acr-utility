@@ -325,5 +325,25 @@ class TemplateExactLinesWhereGoogleSpills(unittest.TestCase):
             sp = p.find(qn('w:pPr') + '/' + qn('w:spacing'))
             self.assertIn(sp.get(qn('w:lineRule')) if sp is not None else None, ('exact', 'atLeast'))
 
+
+class TemplatePart3SignatureGap(unittest.TestCase):
+    """Blank paragraphs above "Signature of Reporting Officer" (after point 41) are minimal so the page fits in
+    Google Docs; see tools/fix_template_google_p13gap.py."""
+    def test_blank_paragraphs_before_signature_are_minimal(self):
+        from docx.oxml.ns import qn
+        body = list(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body)
+        t = lambda e: ' '.join(''.join(x.text or '' for x in e.iter(qn('w:t'))).split())
+        sig = next(k for k, e in enumerate(body) if t(e) == 'Signature of Reporting Officer'
+                   and any(t(body[j]).startswith('HIS ATTITUDE TOWARDS') for j in range(max(0, k - 6), k)))
+        blanks = []
+        j = sig - 1
+        while not t(body[j]):
+            blanks.append(body[j])
+            j -= 1
+        self.assertEqual(len(blanks), 2)
+        for p in blanks:
+            sp = p.find(qn('w:pPr') + '/' + qn('w:spacing'))
+            self.assertEqual((sp.get(qn('w:line')), sp.get(qn('w:lineRule'))), ('20', 'exact'))
+
 if __name__ == '__main__':
     unittest.main()
