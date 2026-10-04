@@ -32,7 +32,7 @@ export function loadGis() {
 
 const SIGNIN_ERRORS = {
   popup_closed: 'Google sign-in was closed before it finished.',
-  popup_failed_to_open: 'The Google sign-in pop-up was blocked; allow pop-ups for this site and try again.',
+  popup_failed_to_open: 'The Google sign-in pop-up was blocked. Tap the button again, or allow pop-ups for this site.',
 };
 
 export function createTokenSource({ clientId, gis, now = () => Date.now(), signInTimeoutMs = 180000 }) {
