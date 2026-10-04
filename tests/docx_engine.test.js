@@ -25,9 +25,10 @@ test('refuses with the same problems as the PC generator', async () => {
 
 test('text style: unknown values fall back to today\'s look', async () => {
   const { normalizeStyle } = await import('../docx_engine.js');
-  assert.deepStrictEqual(normalizeStyle({ color: 'red', font: 'Comic Sans', size: 40, bold: 'yes' }),
-    { color: '0000CC', font: '', size: 0, bold: false, italic: false });
-  assert.deepStrictEqual(normalizeStyle({ color: '#1f3864', size: '12' }),
-    { color: '1F3864', font: '', size: 12, bold: false, italic: false });
-  assert.deepStrictEqual(normalizeStyle(undefined), { color: '0000CC', font: '', size: 0, bold: false, italic: false });
+  assert.deepStrictEqual(normalizeStyle({ chosen: true, color: 'red', font: 'Comic Sans', size: 40, bold: 'yes' }),
+    { color: '000000', font: '', size: 0, bold: false, italic: false, chosen: true });
+  assert.deepStrictEqual(normalizeStyle({ chosen: true, color: '#1f3864', size: '12' }),
+    { color: '1F3864', font: '', size: 12, bold: false, italic: false, chosen: true });
+  assert.deepStrictEqual(normalizeStyle({ color: '#1f3864' }), { color: '000000', font: '', size: 0, bold: false, italic: false, chosen: false });
+  assert.deepStrictEqual(normalizeStyle(undefined), { color: '000000', font: '', size: 0, bold: false, italic: false, chosen: false });
 });

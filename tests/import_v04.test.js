@@ -104,7 +104,9 @@ test('identity and Part-I', () => {
   assert.equal(R.part2.p13a, 'Roll 12345, 2014');
   assert.equal(R.part2.p13b, 'Cleared 2013');
   assert.equal(R.part2.p14, 'Bursar');
-  assert.deepEqual(R.style, { color: '1A3A8F', font: '', size: 0, bold: true, italic: false });
+  assert.deepEqual(R.style, { color: '1A3A8F', font: '', size: 0, bold: true, italic: false, chosen: true });   // semi-bold was a choice
+  const plain = V.convertV04({ ...DOC, style: { answerColor: '#1a3a8f', answerBold: false } }).record.style;
+  assert.equal(plain.chosen, false);   // v0.4's untouched default blue: the new default (black) applies
 });
 
 test('Part-II and its tables', () => {

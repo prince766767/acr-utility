@@ -43,7 +43,7 @@ def records():
     no_title['profile']['title'] = ''
     no_title['profile']['relation'] = ''
     styled = copy(FULL)
-    styled['style'] = {'color': '1F3864', 'font': 'Georgia', 'size': 12, 'bold': True, 'italic': True}
+    styled['style'] = {'chosen': True, 'color': '1F3864', 'font': 'Georgia', 'size': 12, 'bold': True, 'italic': True}
     return {'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'styled': styled, 'empty': {}}
 
 

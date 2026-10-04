@@ -36,25 +36,29 @@ def set_cell(doc,ti,row,col,text):
 FORM_FONT='Times New Roman'
 STYLE_FONTS=('Times New Roman','Arial','Calibri','Cambria','Georgia','Verdana')  # also in Google Docs, so the PDF matches
 STYLE_SIZES=(10,11,12)
-DEFAULT_STYLE={'color':'0000CC','font':'','size':0,'bold':False,'italic':False}
+# Answers print black in the form's own fonts unless the teacher chose otherwise (Text style marks a choice "chosen").
+DEFAULT_STYLE={'color':'000000','font':'','size':0,'bold':False,'italic':False,'chosen':False}
+TEMPLATE_LOOK={'color':'0000CC','font':'','size':0,'bold':False,'italic':False}   # the blue answer runs as the template has them
 
 
 def normalize_style(style):
-    """The teacher's text style for filled-in answers; anything unknown falls back to today's look (blue, form fonts)."""
+    """The teacher's text style for filled-in answers. Not chosen (or saved before choosing existed): the default."""
     s=style if isinstance(style,dict) else {}
+    if s.get('chosen') is not True:
+        return dict(DEFAULT_STYLE)
     color=str(s.get('color') or '').lstrip('#').upper()
     try: size=int(s.get('size') or 0)
     except (TypeError,ValueError): size=0
     return {'color':color if re.fullmatch(r'[0-9A-F]{6}',color) else DEFAULT_STYLE['color'],
             'font':s.get('font') if s.get('font') in STYLE_FONTS else '',
             'size':size if size in STYLE_SIZES else 0,
-            'bold':s.get('bold') is True,'italic':s.get('italic') is True}
+            'bold':s.get('bold') is True,'italic':s.get('italic') is True,'chosen':True}
 
 
 def apply_text_style(doc,style):
     """Every filled-in answer is a blue (0000CC) run: give each the teacher's colour, font, size, bold and italic."""
     st=normalize_style(style)
-    if st==DEFAULT_STYLE:
+    if all(st[k]==v for k,v in TEMPLATE_LOOK.items()):
         return
     for r in list(doc.element.body.iter(qn('w:r'))):
         rpr=r.find(qn('w:rPr'))

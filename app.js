@@ -286,7 +286,7 @@ $('driveBtn').addEventListener('click',()=>runDocxJob(async say=>{
 }));
 
 // Text style for filled-in answers (applied by both generators to every blue answer run).
-const PRESET_COLORS=['0000CC','000000','1F3864','1E5631'];
+const PRESET_COLORS=['000000','0000CC','1F3864','1E5631'];
 STYLE_FONTS.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;$('styleFont').appendChild(o);});
 function renderStyleControls(){
   const st=state.style, preset=PRESET_COLORS.includes(st.color);
@@ -300,7 +300,7 @@ function renderStyleControls(){
 function readStyleControls(){
   const c=$('styleColor').value;
   $('styleCustomWrap').classList.toggle('hidden',c!=='custom');
-  state.style=normalizeStyle({color:c==='custom'?$('styleCustom').value:c,font:$('styleFont').value,size:$('styleSize').value,bold:$('styleBold').checked,italic:$('styleItalic').checked});
+  state.style=normalizeStyle({chosen:true,color:c==='custom'?$('styleCustom').value:c,font:$('styleFont').value,size:$('styleSize').value,bold:$('styleBold').checked,italic:$('styleItalic').checked});
   renderStyleControls(); saveLocal();
 }
 for(const id of ['styleColor','styleCustom','styleFont','styleSize','styleBold','styleItalic'])$(id).addEventListener('change',readStyleControls);

@@ -18,6 +18,7 @@ class TableValueFonts(unittest.TestCase):
         cls.tmp = Path(tempfile.mkdtemp())
         full = json.loads((FIXTURES / 'full_record.acr.json').read_text(encoding='utf-8'))
         full['api'] = json.loads((FIXTURES / 'cases.json').read_text(encoding='utf-8'))[0]['api']
+        full['style'] = {'chosen': True, 'color': '0000CC'}   # answers stay blue here, so they can be found by colour
         generate_acr.generate(full, cls.tmp / 'all.docx')
         cls.doc = Document(cls.tmp / 'all.docx')
 

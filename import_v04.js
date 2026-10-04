@@ -156,8 +156,11 @@ export function convertV04(doc) {
   note("Principal's place", pb.place); note("Principal's college line", pb.college);
   report.push('API scores were copied as typed; the new version totals them under its own rules, so a total can differ slightly from the earlier version.');
 
-  const style = { color: (/^#?[0-9a-f]{6}$/i.test(s(obj(d.style).answerColor)) ? s(d.style.answerColor).replace('#', '').toUpperCase() : '0000CC'),
-    font: '', size: 0, bold: obj(d.style).answerBold === true, italic: false };
+  // v0.4's colour only counts as a choice if the teacher changed it from v0.4's default blue, or chose semi-bold.
+  const v04color = /^#?[0-9a-f]{6}$/i.test(s(obj(d.style).answerColor)) ? s(d.style.answerColor).replace('#', '').toUpperCase() : '';
+  const chosen = (v04color && v04color !== '1A3A8F') || obj(d.style).answerBold === true;
+  const style = chosen ? { color: v04color || '000000', font: '', size: 0, bold: obj(d.style).answerBold === true, italic: false, chosen: true }
+    : { color: '000000', font: '', size: 0, bold: false, italic: false, chosen: false };
 
   const record = { session: s(d.session), profile, part1: {}, part2, teaching, assignments, results, activities, orientation, research, otherInfo,
     api, enclosures, style, ui: { section: 'profile' } };

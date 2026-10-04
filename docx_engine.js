@@ -11,7 +11,9 @@ const BLUE = '0000CC';
 const FORM_FONT = 'Times New Roman';
 export const STYLE_FONTS = ['Times New Roman', 'Arial', 'Calibri', 'Cambria', 'Georgia', 'Verdana']; // also in Google Docs
 export const STYLE_SIZES = [10, 11, 12];
-export const DEFAULT_STYLE = { color: '0000CC', font: '', size: 0, bold: false, italic: false };
+// Answers print black in the form's own fonts unless the teacher chose otherwise (Text style marks a choice "chosen").
+export const DEFAULT_STYLE = { color: '000000', font: '', size: 0, bold: false, italic: false, chosen: false };
+const TEMPLATE_LOOK = { color: '0000CC', font: '', size: 0, bold: false, italic: false };   // the blue answer runs as the template has them
 const RPR_ORDER = ['rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'caps', 'smallCaps', 'strike', 'dstrike', 'outline', 'shadow',
   'emboss', 'imprint', 'noProof', 'snapToGrid', 'vanish', 'webHidden', 'color', 'spacing', 'w', 'kern', 'position', 'sz',
   'szCs', 'highlight', 'u', 'effect', 'bdr', 'shd', 'fitText', 'vertAlign', 'rtl', 'cs', 'em', 'lang', 'eastAsianLayout',
@@ -182,13 +184,14 @@ function setColor(r, hex) {
 // The teacher's text style for filled-in answers (same rules as normalize_style in generate_acr.py).
 export function normalizeStyle(style) {
   const s = obj(style);
+  if (s.chosen !== true) return { ...DEFAULT_STYLE };   // not chosen (or saved before choosing existed): the default
   const color = String(s.color || '').replace(/^#/, '').toUpperCase();
   const size = parseInt(s.size || 0, 10);
   return {
     color: /^[0-9A-F]{6}$/.test(color) ? color : DEFAULT_STYLE.color,
     font: STYLE_FONTS.includes(s.font) ? s.font : '',
     size: STYLE_SIZES.includes(size) ? size : 0,
-    bold: s.bold === true, italic: s.italic === true,
+    bold: s.bold === true, italic: s.italic === true, chosen: true,
   };
 }
 function setOn(rpr, local) {
@@ -198,7 +201,7 @@ function setOn(rpr, local) {
 // Every filled-in answer is a blue (0000CC) run: give each the teacher's colour, font, size, bold and italic.
 function applyTextStyle(xml, style) {
   const st = normalizeStyle(style);
-  if (Object.keys(DEFAULT_STYLE).every(k => st[k] === DEFAULT_STYLE[k])) return;
+  if (Object.keys(TEMPLATE_LOOK).every(k => st[k] === TEMPLATE_LOOK[k])) return;
   const body = all(xml.documentElement, 'body')[0];
   for (const r of all(body, 'r')) {
     const rpr = kid(r, 'rPr');
