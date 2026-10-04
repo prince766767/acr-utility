@@ -50,3 +50,12 @@ test('sw.js: every precached asset exists and both rules are used', () => {
   for (const a of list.filter(a => a !== './')) assert.ok(existsSync(new URL('../' + a, import.meta.url)), a);
   assert.ok(sw.includes('shouldCache(') && sw.includes('networkFirst('));
 });
+
+test('a new version takes over at once and the page reloads once, only on updates', () => {
+  const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+  assert.match(sw, /addEventListener\('install',event=>\{self\.skipWaiting\(\);/);
+  const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  // reload only when a previous version was in control (an update), and only once
+  assert.match(app, /const hadController=Boolean\(navigator\.serviceWorker\.controller\)/);
+  assert.match(app, /controllerchange',\(\)=>\{if\(!hadController\|\|reloaded\)return;reloaded=true;location\.reload\(\);\}/);
+});

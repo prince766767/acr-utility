@@ -265,7 +265,13 @@ function escapeHtml(s){return s.replaceAll('&','&amp;').replaceAll('<','&lt;').r
 
 if(firebaseReady){$('signInBtn').addEventListener('click',async()=>{const provider=new GoogleAuthProvider();await signInWithPopup(auth,provider);});$('signOutBtn').addEventListener('click',()=>signOut(auth));onAuthStateChanged(auth,async user=>{currentUser=user;if(user){$('userLine').textContent=user.email||'Signed in';if(SHOW_FIREBASE_SIGNIN){$('signInBtn').classList.add('hidden');$('signOutBtn').classList.remove('hidden');}try{await loadCloud();}catch(err){console.warn(err);$('syncStatus').textContent='Signed in; local draft is available even if cloud sync is unavailable.';}}else{$('userLine').textContent='Local draft mode';if(SHOW_FIREBASE_SIGNIN){$('signInBtn').classList.remove('hidden');$('signOutBtn').classList.add('hidden');}}});}else{$('signInBtn').disabled=true;$('signInBtn').title='Configure firebase-config.js first';}
 
-if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
+if('serviceWorker' in navigator){
+  // A new version takes over as soon as it is downloaded (sw.js skipWaiting); reload once so the page runs it.
+  // Not on a first visit (no previous version), and the form is saved on every change, so nothing is lost.
+  const hadController=Boolean(navigator.serviceWorker.controller); let reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadController||reloaded)return;reloaded=true;location.reload();});
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
+}
 initApiUi({getApi:()=>state.api,onChange:()=>{updateScores();saveLocal();}});
 initLastYearUi({getLy:()=>state.api.lastAcademicYear||{},setLy:v=>{state.api.lastAcademicYear=v;},onChange:()=>{resolveLastYear();updateScores();saveLocal();},onImport:importLastYearFile});
 renderApiLists();loadLocal();renderRepeatables();renderEnclosures();updateScores();updateProgress();renderReview();
