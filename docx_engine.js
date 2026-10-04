@@ -283,8 +283,39 @@ const field = (e, key) => (e[key] === undefined || e[key] === null ? '' : String
 const sc = e => scoreText(e.score);
 const level = e => (typeof e.row === 'string' && has(LEVEL_TEXT, e.row) ? LEVEL_TEXT[e.row] : '');
 
+// Category-III parts: table, list name, words in the heading just above the table (as C3_PARTS in generate_acr.py).
+const C3_PARTS = [[13, 'journals', 'Publishedpapers'], [14, 'chapters', 'Articles/Chapters'], [15, 'proceedings', 'FullPapers'],
+  [16, 'books', 'BooksPublished'], [17, 'ongoing', 'OngoingProjects'], [18, 'completed', 'CompletedProjects'],
+  [20, 'training', 'TrainingCourses'], [21, 'papers', 'Paperspresented'], [22, 'lectures', 'InvitedLectures']];
+const GUIDANCE_KEYS = ['mphilEnrolled', 'mphilSubmitted', 'mphilAwarded', 'mphilScore', 'phdEnrolled', 'phdSubmitted', 'phdAwarded',
+  'phdAwardedScore', 'phdSubmittedScore'];
+const pText = p => all(p, 't').map(t => t.textContent).join('');
+function headingAbove(doc, ti, words) {
+  let prev = doc.tables[ti].tbl.previousSibling;
+  while (prev && !(isW(prev, 'p') && pText(prev).trim())) prev = prev.previousSibling;
+  check(!!prev && norm(pText(prev)).includes(words), ti, `the heading "${words}" above it`);
+  return prev;
+}
+// An empty Category-III part: "NIL" after its heading (two tabs on), as teachers write it.
+function markNil(doc, ti, words) {
+  const p = headingAbove(doc, ti, words), xml = p.ownerDocument;
+  const last = kids(p, 'r').filter(r => kid(r, 't')).pop();
+  const rpr = kid(last, 'rPr');
+  const tabs = p.appendChild(wEl(xml, 'r'));
+  if (rpr) tabs.appendChild(rpr.cloneNode(true));
+  tabs.appendChild(wEl(xml, 'tab')); tabs.appendChild(wEl(xml, 'tab'));
+  const nil = p.appendChild(wEl(xml, 'r'));
+  if (rpr) nil.appendChild(rpr.cloneNode(true));
+  setColor(nil, BLUE);
+  const t = nil.appendChild(wEl(xml, 't'));
+  t.appendChild(xml.createTextNode('NIL'));
+}
+
 function fillApiTables(doc, api, v) {
   const T = doc.tables;
+  // 26(i) lectures, seminars, tutorials, practicals
+  check(norm(T[7].text(0, 1)).startsWith('Course') && T[7].colCount === 7, 7, 'the 26(i) Course/Paper table');
+  fillRows(doc, 7, entries(api, 'c1', 'lectures').map((e, i) => [i + 1, ...['course', 'level', 'mode', 'allotted', 'conducted', 'pct'].map(k => field(e, k))]), 1);
   check(norm(T[8].text(1, 0)) === '(a)' && norm(T[8].text(2, 0)) === '(b)', 8, '(a)/(b) rows');
   setCell(doc, 8, 1, 2, v.p42.i_a);
   setCell(doc, 8, 2, 2, v.p42.i_b);
@@ -323,6 +354,18 @@ function fillApiTables(doc, api, v) {
   fillRows(doc, 20, entries(api, 'c3', 'training').map((e, i) => [i + 1, field(e, 'programme'), field(e, 'duration'), field(e, 'organisedBy'), sc(e)]), 1);
   fillRows(doc, 21, entries(api, 'c3', 'papers').map((e, i) => [i + 1, field(e, 'title'), field(e, 'conference'), field(e, 'organisedBy'), level(e), sc(e)]), 1);
   fillRows(doc, 22, entries(api, 'c3', 'lectures').map((e, i) => [i + 1, field(e, 'title'), field(e, 'conference'), field(e, 'organisedBy'), level(e), sc(e)]), 1);
+  // Empty Category-III parts: NIL by the heading, 00 in the score box.
+  for (const [ti, name, words] of C3_PARTS) {
+    if (!entries(api, 'c3', name).length) {
+      markNil(doc, ti, words);
+      setCell(doc, ti, 1, doc.tables[ti].rowCells(1).length - 1, '00');
+    }
+  }
+  if (!GUIDANCE_KEYS.some(k => field(g, k).trim())) {
+    markNil(doc, 19, 'ResearchGuidance');
+    setCell(doc, 19, 1, 4, '00');
+    setCell(doc, 19, 2, 4, '00');
+  }
   const ly = lastYearCells(api.lastAcademicYear);
   check(norm(doc.tables[31].text(0, 2)).startsWith('LastAcademic'), 31, 'the "Last Academic Year" header of point 45');
   for (const [r, label, key, value] of [[1, 'Teaching', 'cat1', v.p29.I], [2, 'Co-curricular', 'cat2', v.p29.II],

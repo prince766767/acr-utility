@@ -126,6 +126,7 @@ test('Part-II and its tables', () => {
 test('API scores 26-29, with point-44 rows', () => {
   const a = R.api;
   assert.deepEqual([a.c1.classes, a.c1.excess, a.c1.resourcesScore], ['50', '5', '12']);
+  assert.deepEqual(a.c1.lectures, [{ course: 'B.Sc. I', level: 'UG', mode: 'Lecture', allotted: '6', conducted: '150', pct: '100' }]);
   assert.deepEqual(a.c1.resources, [{ course: 'B.Sc. I', consulted: 'Book X', prescribed: 'Book Y', additional: 'Notes' }]);
   assert.deepEqual(a.c1.innovative, [{ description: 'ICT teaching', score: '10' }]);
   assert.deepEqual(a.c1.exam, [{ type: 'Invigilation', assigned: '10', extent: '100%', score: '15' }]);
@@ -155,7 +156,7 @@ test('arts slabs for ongoing projects', () => {
 
 test('everything not carried over is in the report, with its text', () => {
   const text = report.join('\n');
-  for (const s of ['26(i)', 'B.Sc. I', 'Practical is two hours.', 'Register p. 12', 'Footnote text', '(override)', '100', 'Encl.', 'Candidates A, B', 'Alpha']) {
+  for (const s of ['Practical is two hours.', 'Register p. 12', 'Footnote text', '(override)', '100', 'Encl.', 'Candidates A, B', 'Alpha']) {
     assert.ok(text.includes(s), s);
   }
 });

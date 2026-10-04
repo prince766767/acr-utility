@@ -187,8 +187,42 @@ def field(e, key):
     return '' if v is None else str(v)
 
 
+# Category-III parts: table, list name, words in the heading just above the table (checked before writing).
+C3_PARTS = ((13, 'journals', 'Publishedpapers'), (14, 'chapters', 'Articles/Chapters'), (15, 'proceedings', 'FullPapers'),
+            (16, 'books', 'BooksPublished'), (17, 'ongoing', 'OngoingProjects'), (18, 'completed', 'CompletedProjects'),
+            (20, 'training', 'TrainingCourses'), (21, 'papers', 'Paperspresented'), (22, 'lectures', 'InvitedLectures'))
+GUIDANCE_KEYS = ('mphilEnrolled', 'mphilSubmitted', 'mphilAwarded', 'mphilScore', 'phdEnrolled', 'phdSubmitted', 'phdAwarded',
+                 'phdAwardedScore', 'phdSubmittedScore')
+
+
+def heading_above(doc, ti, words):
+    prev = doc.tables[ti]._tbl.getprevious()
+    while prev is not None and not (prev.tag == qn('w:p') and ''.join(x.text or '' for x in prev.iter(qn('w:t'))).strip()):
+        prev = prev.getprevious()
+    _check(prev is not None and words in _norm(''.join(x.text or '' for x in prev.iter(qn('w:t')))), ti, f'the heading "{words}" above it')
+    return prev
+
+
+def mark_nil(doc, ti, words):
+    """An empty Category-III part: "NIL" after its heading (two tabs on), as teachers write it."""
+    p = heading_above(doc, ti, words)
+    last = [r for r in p.findall(qn('w:r')) if r.find(qn('w:t')) is not None][-1]
+    rpr = last.find(qn('w:rPr'))
+    tabs = etree.SubElement(p, W + 'r')
+    if rpr is not None: tabs.append(deepcopy(rpr))
+    etree.SubElement(tabs, W + 'tab'); etree.SubElement(tabs, W + 'tab')
+    nil = etree.SubElement(p, W + 'r')
+    if rpr is not None: nil.append(deepcopy(rpr))
+    Run(nil, None).font.color.rgb = BLUE
+    etree.SubElement(nil, W + 't').text = 'NIL'
+
+
 def fill_api_tables(doc, api, v):
     T = doc.tables
+    # 26(i) lectures, seminars, tutorials, practicals
+    _check(_norm(T[7].rows[0].cells[1].text).startswith('Course') and len(T[7].columns) == 7, 7, 'the 26(i) Course/Paper table')
+    fill_rows(doc, 7, [[i, field(e, 'course'), field(e, 'level'), field(e, 'mode'), field(e, 'allotted'), field(e, 'conducted'), field(e, 'pct')]
+                       for i, e in enumerate(entries(api, 'c1', 'lectures'), 1)], 1)
     # 26(i)(a), (b)
     _check(_norm(T[8].rows[1].cells[0].text) == '(a)' and _norm(T[8].rows[2].cells[0].text) == '(b)', 8, '(a)/(b) rows')
     set_cell(doc, 8, 1, 2, v['p42']['i_a'])
@@ -248,6 +282,15 @@ def fill_api_tables(doc, api, v):
                         for i, e in enumerate(entries(api, 'c3', 'papers'), 1)], 1)
     fill_rows(doc, 22, [[i, field(e, 'title'), field(e, 'conference'), field(e, 'organisedBy'), LEVEL_TEXT.get(e.get('row'), ''), sc(e)]
                         for i, e in enumerate(entries(api, 'c3', 'lectures'), 1)], 1)
+    # Empty Category-III parts: NIL by the heading, 00 in the score box.
+    for ti, name, words in C3_PARTS:
+        if not entries(api, 'c3', name):
+            mark_nil(doc, ti, words)
+            set_cell(doc, ti, 1, len(T[ti].rows[1].cells) - 1, '00')
+    if not any(field(g, k).strip() for k in GUIDANCE_KEYS):
+        mark_nil(doc, 19, 'ResearchGuidance')
+        set_cell(doc, 19, 1, 4, '00')
+        set_cell(doc, 19, 2, 4, '00')
     # 29 and 45: column 3 = last academic year (I+II computed), column 4 = this year's totals; 45 col 5 is the Principal's.
     ly = last_year_cells(api.get('lastAcademicYear'))
     _check(_norm(T[31].rows[0].cells[2].text).startswith('LastAcademic'), 31, 'the "Last Academic Year" header of point 45')

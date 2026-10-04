@@ -32,7 +32,8 @@ def records():
     extra['orientation'] = [{'course': f'O{i}', 'place': 'P', 'duration': '21 days', 'rcoc': f'RC-{i}'} for i in range(3)]
     extra['research'] = [{'title': f'Rs{i}', 'institution': 'U', 'nature': 'Minor', 'status': 'On'} for i in range(2)]
     extra['otherInfo'] = [{'text': f'Info {i}'} for i in range(3)]
-    extra['api'] = {'c1': {'innovative': [{'description': f'm{i}', 'score': 3} for i in range(5)],
+    extra['api'] = {'c1': {'lectures': [{'course': f'BOTA-{i}', 'level': 'UG', 'mode': 'Lecture', 'allotted': '3 Theory + 1 Practical', 'conducted': str(50 + i), 'pct': '100%'} for i in range(7)],
+                           'innovative': [{'description': f'm{i}', 'score': 3} for i in range(5)],
                            'exam': [{'type': f'd{i}', 'score': 4} for i in range(5)],
                            'resources': [{'course': f'c{i}'} for i in range(5)], 'resourcesScore': 12},
                     'c2': {'extension': [{'activity': f'e{i}', 'score': 4} for i in range(4)],

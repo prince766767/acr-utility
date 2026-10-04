@@ -2,13 +2,14 @@
 // Every value typed here is stored as typed in state.api; api_tally.js does all the arithmetic.
 import { ROW_CHOICES, ROW_LABELS, C3_WHERE, P44_ORDER } from './api_tally.js';
 
-const WHERE = { 'c1.innovative': '26(iii)', 'c1.exam': '26(iv)', 'c2.extension': '27(i)', 'c2.management': '27(ii)', 'c2.professional': '27(iii)' };
+const WHERE = { 'c1.lectures': '26(i)', 'c1.innovative': '26(iii)', 'c1.exam': '26(iv)', 'c2.extension': '27(i)', 'c2.management': '27(ii)', 'c2.professional': '27(iii)' };
 for (const [k, w] of Object.entries(C3_WHERE)) WHERE['c3.' + k] = w;
 
 const SCORE = ['score', 'API score', 'score'];
 const ROW = ['row', 'Point-44 row', 'row'];
 const LEVEL = ['row', 'Level (point-44 row)', 'row'];
 const FIELDS = {
+  'c1.lectures': [['course', 'Course / Paper'], ['level', 'Level'], ['mode', 'Mode of teaching'], ['allotted', 'No. of classes / week allotted'], ['conducted', 'No. of classes conducted'], ['pct', '% of classes taken (documented record)']],
   'c1.resources': [['course', 'Course / Paper'], ['consulted', 'Consulted'], ['prescribed', 'Prescribed'], ['additional', 'Additional resource provided']],
   'c1.innovative': [['description', 'Short description'], SCORE],
   'c1.exam': [['type', 'Type of examination duty'], ['assigned', 'Duties assigned'], ['extent', 'Extent carried out (%)'], SCORE],

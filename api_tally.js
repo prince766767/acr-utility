@@ -56,7 +56,7 @@ const LEGACY_KEYS = ['apiC1Classes', 'apiC1Excess', 'apiC1Resources', 'apiC1Inno
 
 export function emptyApi() {
   return {
-    c1: { classes: '', excess: '', resourcesScore: '', resources: [], innovative: [], exam: [] },
+    c1: { classes: '', excess: '', resourcesScore: '', lectures: [], resources: [], innovative: [], exam: [] },
     c2: { extension: [], management: [], professional: [] },
     c3: {
       journals: [], chapters: [], proceedings: [], books: [], ongoing: [], completed: [],

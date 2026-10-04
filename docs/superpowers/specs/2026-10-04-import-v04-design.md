@@ -106,7 +106,7 @@ so a total may differ from v0.4's if v0.4 capped or rounded differently. The rep
 
 ## Not carried over (listed in the report with the v0.4 text)
 
-- 26(i) table rows (course, level, mode, classes): the new version has no such table, only the (a)/(b) scores.
+- (Since 2026-10-04 the new version has 26(i) rows, so these are now carried over.)
 - The 19(a) note beside the total, the 19(c) "verifiable record" remarks, and the 26(ii) footnote.
 - The "Reported (override)" figures of point 29.
 - Enclosure numbers in the Category-III tables ("Encl. #").

@@ -26,7 +26,7 @@ class Template27iii(unittest.TestCase):
         # Every entry row of the point 26-28 tables needs its own cells, or one score overwrites another.
         from docx.oxml.ns import qn
         doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
-        for ti in (10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22):
+        for ti in (7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22):
             for r, tr in enumerate(doc.tables[ti]._tbl.tr_lst):
                 for tc in tr.tc_lst:
                     self.assertIsNone(tc.tcPr.find(qn('w:vMerge')) if tc.tcPr is not None else None, f'table {ti} row {r}')

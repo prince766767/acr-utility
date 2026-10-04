@@ -109,6 +109,7 @@ export function convertV04(doc) {
   const ii = obj(c1.ii);
   const api = {
     c1: { classes: s(c1.scoreA), excess: s(c1.scoreB), resourcesScore: s(ii.score),
+      lectures: arr(c1.rows).map(r => ({ course: s(r.course), level: s(r.level), mode: s(r.mode), allotted: s(r.allotted), conducted: s(r.conducted), pct: s(r.pct) })),
       resources: arr(ii.rows).map(r => ({ course: s(r.course), consulted: s(r.consulted), prescribed: s(r.prescribed), additional: s(r.additional) })),
       innovative: arr(obj(c1.iii).rows).map(r => ({ description: s(r.desc), score: s(r.score) })),
       exam: arr(obj(c1.iv).rows).map(r => ({ type: s(r.type), assigned: s(r.assigned), extent: s(r.extent), score: s(r.score) })) },
@@ -144,7 +145,6 @@ export function convertV04(doc) {
   if (s(ly.c1) || s(ly.c2) || s(ly.c3)) api.lastAcademicYear = { cat1: s(ly.c1), cat2: s(ly.c2), cat3: s(ly.c3), source: 'typed' };
 
   // ---- what could not come over ----
-  for (const r of arr(c1.rows)) note('26(i) table row (the new version has only the (a) and (b) scores)', [r.course, r.level, r.mode, r.allotted, r.conducted, r.pct].map(s).filter(Boolean).join(' – '));
   note('19(a) note beside the total', s1.q19aNote);
   for (const r of arr(s1.q19c)) note(`19(c) verifiable record note for ${s(r.cls)}`, r.remark);
   note('26(ii) footnote', ii.note);
