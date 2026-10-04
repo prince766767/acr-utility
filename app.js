@@ -69,7 +69,7 @@ function applySimple(raw){
 function saveLocal(){const data=collectSimple(); data.savedAt=new Date().toISOString(); sessions.writeRecord(store,data); $('lastSaved').value=new Date(data.savedAt).toLocaleString(); updateProgress(); return data;}
 function loadLocal(){const notices=sessions.migrate(store); const rec=sessions.loadCurrent(store); if(rec){applySimple(rec); if(rec.savedAt) $('lastSaved').value=new Date(rec.savedAt).toLocaleString();} resolveLastYear(); refreshSessionList(); if(notices.length) $('syncStatus').textContent=notices.join(' ');}
 function refreshSessionList(){const dl=$('sessionList'); dl.innerHTML=''; for(const s of sessions.listSessions(store)){const o=document.createElement('option'); o.value=s; dl.appendChild(o);}}
-function openSession(session){const rec=sessions.readRecord(store,session)||sessions.newRecordFrom({},session); applySimple(rec); store.setItem(sessions.CURRENT_KEY,session); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList(); renderReview();}
+function openSession(session){clearPendingShare(); const rec=sessions.readRecord(store,session)||sessions.newRecordFrom({},session); applySimple(rec); store.setItem(sessions.CURRENT_KEY,session); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList(); renderReview();}
 function resolveLastYear(){
   const info=sessions.lastYear(store,state.session);
   const ly=state.api.lastAcademicYear&&typeof state.api.lastAcademicYear==='object'?state.api.lastAcademicYear:{};
@@ -166,7 +166,7 @@ function renderFieldProblems(d){
   if(!probs.length){const li=document.createElement('li');li.className='ok';li.textContent='No problems. The ACR can be generated.';ul.appendChild(li);return;}
   for(const p of probs){const li=document.createElement('li');li.textContent=p.message;ul.appendChild(li);}
 }
-form.addEventListener('input',()=>{updateScores();updateDobWords();saveLocal();});
+form.addEventListener('input',()=>{clearPendingShare();updateScores();updateDobWords();saveLocal();});
 form.addEventListener('change',()=>{updateScores();saveLocal();});
 $('saveBtn').addEventListener('click',async()=>{try{if(firebaseReady&&currentUser)await saveCloud();else{saveLocal();$('syncStatus').textContent='Draft saved locally.';}}catch(err){console.error(err);$('syncStatus').textContent='Saved locally; cloud sync failed, so no work was lost.';}});
 $('exportBtn').addEventListener('click',()=>{const data=saveLocal();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`ACR_${data.session||'draft'}.acr.json`;a.click();URL.revokeObjectURL(a.href);});
@@ -205,18 +205,20 @@ const errText=err=>err instanceof ProblemsError?'Fix the problems listed above f
 // Runs one job at a time; job(say) returns the final status text, or a DOM node for it.
 async function runDocxJob(job){
   if(docxBusy) return;
-  const status=$('docxStatus'); docxBusy=true; syncDocxButtons(); $('shareNowBtn').classList.add('hidden'); pendingShare=null;
+  const status=$('docxStatus'); docxBusy=true; syncDocxButtons(); clearPendingShare();
   try{const out=await job(t=>{status.textContent=t;}); status.replaceChildren(out);}
   catch(err){console.error(err); status.textContent=errText(err);}
   finally{docxBusy=false; syncDocxButtons();}
 }
+function clearPendingShare(){pendingShare=null; $('shareNowBtn').classList.add('hidden');}
 function offerShareTap(files,label){pendingShare=files; $('shareNowBtn').textContent=label; $('shareNowBtn').classList.remove('hidden');}
 // retry:false is for a result that follows a fresh tap on "Open share menu": offering the button again could loop forever.
 function shareResultText(result,files,{retry=true}={}){
   if(result==='shared') return 'Share menu opened; the files went to the app you chose.';
+  if(result==='partial') return "The PDF went to the share menu. This browser can't share Word files, so the Word file was downloaded; attach it to the email yourself.";
   if(result==='cancelled') return 'Sharing was cancelled.';
   if(result==='needs-tap'&&retry){offerShareTap(files,'Open share menu'); return 'The files are ready. Tap "Open share menu".';}
-  if(result==='needs-tap'){files.forEach(f=>downloadFile(f)); return 'This browser would not share the files, so they were downloaded. Attach them to an email yourself.';}
+  if(result==='needs-tap'){files.forEach(f=>downloadFile(f)); return files.length>1?'This browser would not share the files, so they were downloaded. Attach them to an email yourself.':'This browser would not share the file, so it was downloaded. Attach it to an email yourself.';}
   return files.length>1?"This browser can't attach files to a share; both files were downloaded. Attach them to an email yourself.":"This browser can't attach files to a share; the file was downloaded. Attach it to an email yourself.";
 }
 async function pdfFor(d,docx){return new File([await drive.docxToPdf(docx)],acrFileName(d,'pdf'),{type:'application/pdf'});}
