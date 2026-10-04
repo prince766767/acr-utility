@@ -345,5 +345,15 @@ class TemplatePart3SignatureGap(unittest.TestCase):
             sp = p.find(qn('w:pPr') + '/' + qn('w:spacing'))
             self.assertEqual((sp.get(qn('w:line')), sp.get(qn('w:lineRule'))), ('20', 'exact'))
 
+    def test_blank_lines_under_points_40_and_41_are_half_height(self):
+        from docx.oxml.ns import qn
+        body = list(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body)
+        t = lambda e: ' '.join(''.join(x.text or '' for x in e.iter(qn('w:t'))).split())
+        for start in ('DOES HE/SHE TAKE INTEREST IN USE OF HINDI', 'HIS ATTITUDE TOWARDS'):
+            k = next(k for k, e in enumerate(body) if t(e).startswith(start))
+            self.assertFalse(t(body[k + 1]), start)
+            sp = body[k + 1].find(qn('w:pPr') + '/' + qn('w:spacing'))
+            self.assertEqual((sp.get(qn('w:before')), sp.get(qn('w:line')), sp.get(qn('w:lineRule'))), ('0', '134', 'exact'), start)
+
 if __name__ == '__main__':
     unittest.main()
