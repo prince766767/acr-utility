@@ -21,7 +21,7 @@ class BuildSiteTest(unittest.TestCase):
 
     def test_every_cached_app_file_is_published(self):
         files = build_site.app_files()
-        for name in ['index.html', 'app.js', 'sw.js', 'sw_rules.js', 'google-config.js', 'vendor/jszip.min.js', 'ACR_EMPLOYEE_MASTER.docx']:
+        for name in ['index.html', 'app.js', 'sw.js', 'sw_rules.js', 'google-config.js', 'vendor/jszip.min.js', 'ACR_EMPLOYEE_MASTER.docx', 'privacy.html']:
             self.assertIn(name, files)
         for name in files:
             self.assertEqual((self.out / name).read_bytes(), (ROOT / name).read_bytes(), name)
