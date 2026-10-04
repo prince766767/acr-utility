@@ -7,7 +7,7 @@ import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
 import { parseDob, dobWords, fieldProblems, migrateDraft } from './acr_fields.js';
 import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
-import { generateDocx, ProblemsError } from './docx_engine.js';
+import { generateDocx, ProblemsError, normalizeStyle, STYLE_FONTS, DEFAULT_STYLE } from './docx_engine.js';
 import { acrFileName } from './file_names.js';
 import googleConfig from './google-config.js';
 import { loadGis, createTokenSource, createDrive, FOLDER_NAME } from './google_drive.js';
@@ -21,7 +21,7 @@ function safeStore(){
   return {get length(){return guard(()=>ls.length,0);},key:i=>guard(()=>ls.key(i),null),getItem:k=>guard(()=>ls.getItem(k),null),setItem:(k,v)=>guard(()=>ls.setItem(k,v)),removeItem:k=>guard(()=>ls.removeItem(k))};
 }
 const store=safeStore();
-const state={session:'', profile:{}, part1:{}, part2:{}, teaching:[], assignments:[], results:[], activities:[], orientation:[], research:[], otherInfo:[], api:emptyApi(), enclosures:[], ui:{section:'profile'}};
+const state={session:'', profile:{}, part1:{}, part2:{}, teaching:[], assignments:[], results:[], activities:[], orientation:[], research:[], otherInfo:[], api:emptyApi(), enclosures:[], ui:{section:'profile'}, style:{...DEFAULT_STYLE}};
 let auth=null, db=null, firebaseReady=false, currentUser=null;
 
 try {
@@ -43,7 +43,7 @@ const enclosureDefaults=['Certificate / sanction order','FDP / Orientation / Ref
 
 function deepAssign(obj,path,value){let p=obj;for(let i=0;i<path.length-1;i++){p=p[path[i]]??={};}p[path[path.length-1]]=value;}
 function collectSimple(){
-  const data={session:state.session, profile:{}, part1:{}, part2:{}, api:state.api, ui:state.ui, enclosures:state.enclosures, teaching:state.teaching, assignments:state.assignments, results:state.results, activities:state.activities, orientation:state.orientation, research:state.research, otherInfo:state.otherInfo};
+  const data={session:state.session, profile:{}, part1:{}, part2:{}, api:state.api, ui:state.ui, enclosures:state.enclosures, teaching:state.teaching, assignments:state.assignments, results:state.results, activities:state.activities, orientation:state.orientation, research:state.research, otherInfo:state.otherInfo, style:state.style};
   form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{
     const n=el.name; const value=el.type==='number' ? (el.value===''?'':Number(el.value)) : el.value;
     if(['collegeName','collegeDistrict','collegePin','principalName','collegeAddress','collegeOther','title','relation','fullName','fatherHusband','employeeCode','subject','appointmentDate','designation','payBand','basicPay','promotionDate','academicQualification','professionalQualification','researchDegree','dob','serviceStatus','landline','mobile','email','submissionDate','permanentAddress'].includes(n)) data.profile[n]=value;
@@ -63,6 +63,7 @@ function applySimple(raw){
     else if(el.tagName==='SELECT') el.selectedIndex=0;
     else el.value='';
   });
+  state.style=normalizeStyle(data.style); renderStyleControls();
   state.session=data.session||''; state.profile=data.profile||{}; state.part1=data.part1||{}; state.part2=data.part2||{}; state.api=apiData; state.teaching=data.teaching||[]; state.assignments=data.assignments||[]; state.results=data.results||[]; state.activities=data.activities; state.orientation=data.orientation; state.research=data.research; state.otherInfo=data.otherInfo; state.enclosures=data.enclosures||[]; state.ui=data.ui||{section:'profile'};
   renderRepeatables(); renderEnclosures(); renderApiLists(); showLegacyNotice(legacy); showPartNotice(notices); updateDobWords(); updateScores(); switchSection(state.ui.section||'profile');
 }
@@ -258,6 +259,31 @@ $('driveBtn').addEventListener('click',()=>runDocxJob(async say=>{
   const a=document.createElement('a'); a.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`; a.target='_blank'; a.rel='noopener'; a.textContent=`Open the "${FOLDER_NAME}" folder`;
   p.append(a); return p;
 }));
+
+// Text style for filled-in answers (applied by both generators to every blue answer run).
+const PRESET_COLORS=['0000CC','000000','1F3864','1E5631'];
+STYLE_FONTS.forEach(f=>{const o=document.createElement('option');o.value=f;o.textContent=f;$('styleFont').appendChild(o);});
+function renderStyleControls(){
+  const st=state.style, preset=PRESET_COLORS.includes(st.color);
+  $('styleColor').value=preset?st.color:'custom'; $('styleCustomWrap').classList.toggle('hidden',preset);
+  $('styleCustom').value='#'+st.color.toLowerCase(); $('styleFont').value=st.font; $('styleSize').value=String(st.size);
+  $('styleBold').checked=st.bold; $('styleItalic').checked=st.italic;
+  const sample=$('styleSample').style;
+  sample.color='#'+st.color; sample.fontFamily=st.font?`"${st.font}"`:'"Times New Roman",serif';
+  sample.fontWeight=st.bold?'bold':'normal'; sample.fontStyle=st.italic?'italic':'normal'; sample.fontSize=st.size?`${st.size}pt`:'';
+}
+function readStyleControls(){
+  const c=$('styleColor').value;
+  $('styleCustomWrap').classList.toggle('hidden',c!=='custom');
+  state.style=normalizeStyle({color:c==='custom'?$('styleCustom').value:c,font:$('styleFont').value,size:$('styleSize').value,bold:$('styleBold').checked,italic:$('styleItalic').checked});
+  renderStyleControls(); saveLocal();
+}
+for(const id of ['styleColor','styleCustom','styleFont','styleSize','styleBold','styleItalic'])$(id).addEventListener('change',readStyleControls);
+$('styleCustom').addEventListener('input',readStyleControls);
+function toggleStylePanel(open){const p=$('stylePanel'); const show=open??p.classList.contains('hidden'); p.classList.toggle('hidden',!show); $('styleBtn').setAttribute('aria-expanded',String(show)); if(show)renderStyleControls();}
+$('styleBtn').addEventListener('click',()=>toggleStylePanel());
+$('styleClose').addEventListener('click',()=>toggleStylePanel(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('stylePanel').classList.contains('hidden'))toggleStylePanel(false);});
 
 // Preview: the same Word file as Download, drawn as HTML pages by docx-preview (vendor/), from any tab.
 // Headers/footers are left out: docx-preview can't work out page numbers.

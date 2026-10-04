@@ -94,10 +94,12 @@ export function decideSwitch(current, target, targetExists) {
 
 export function newRecordFrom(record, session) {
   const profile = record && typeof record.profile === 'object' && record.profile ? JSON.parse(JSON.stringify(record.profile)) : {};
-  return {
+  const out = {
     session, profile, part1: {}, part2: {}, teaching: [], assignments: [], results: [], activities: [],
     orientation: [], research: [], otherInfo: [], api: {}, enclosures: [], ui: { section: 'profile' },
   };
+  if (record && record.style && typeof record.style === 'object') out.style = JSON.parse(JSON.stringify(record.style));
+  return out;
 }
 
 function totals(api) {

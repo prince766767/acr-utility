@@ -9,6 +9,9 @@ const XML_NS = 'http://www.w3.org/XML/1998/namespace';
 const XMLNS_NS = 'http://www.w3.org/2000/xmlns/';
 const BLUE = '0000CC';
 const FORM_FONT = 'Times New Roman';
+export const STYLE_FONTS = ['Times New Roman', 'Arial', 'Calibri', 'Cambria', 'Georgia', 'Verdana']; // also in Google Docs
+export const STYLE_SIZES = [10, 11, 12];
+export const DEFAULT_STYLE = { color: '0000CC', font: '', size: 0, bold: false, italic: false };
 const RPR_ORDER = ['rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'caps', 'smallCaps', 'strike', 'dstrike', 'outline', 'shadow',
   'emboss', 'imprint', 'noProof', 'snapToGrid', 'vanish', 'webHidden', 'color', 'spacing', 'w', 'kern', 'position', 'sz',
   'szCs', 'highlight', 'u', 'effect', 'bdr', 'shd', 'fitText', 'vertAlign', 'rtl', 'cs', 'em', 'lang', 'eastAsianLayout',
@@ -175,6 +178,49 @@ function setColor(r, hex) {
   for (const c of kids(rpr, 'color')) rpr.removeChild(c);
   const color = insertOrdered(rpr, wEl(r.ownerDocument, 'color'), RPR_ORDER);
   wSet(color, 'val', hex);
+}
+// The teacher's text style for filled-in answers (same rules as normalize_style in generate_acr.py).
+export function normalizeStyle(style) {
+  const s = obj(style);
+  const color = String(s.color || '').replace(/^#/, '').toUpperCase();
+  const size = parseInt(s.size || 0, 10);
+  return {
+    color: /^[0-9A-F]{6}$/.test(color) ? color : DEFAULT_STYLE.color,
+    font: STYLE_FONTS.includes(s.font) ? s.font : '',
+    size: STYLE_SIZES.includes(size) ? size : 0,
+    bold: s.bold === true, italic: s.italic === true,
+  };
+}
+function setOn(rpr, local) {
+  const el = getOrAdd(rpr, local, RPR_ORDER);
+  el.removeAttributeNS(W, 'val');
+}
+// Every filled-in answer is a blue (0000CC) run: give each the teacher's colour, font, size, bold and italic.
+function applyTextStyle(xml, style) {
+  const st = normalizeStyle(style);
+  if (Object.keys(DEFAULT_STYLE).every(k => st[k] === DEFAULT_STYLE[k])) return;
+  const body = all(xml.documentElement, 'body')[0];
+  for (const r of all(body, 'r')) {
+    const rpr = kid(r, 'rPr');
+    const c = kid(rpr, 'color');
+    if (!c || (wGet(c, 'val') || '').toUpperCase() !== BLUE) continue;
+    if (st.font) {
+      const fonts = getOrAdd(rpr, 'rFonts', RPR_ORDER);
+      for (const a of Array.from(fonts.attributes)) if (a.namespaceURI === W && a.localName.endsWith('Theme')) fonts.removeAttributeNode(a);
+      for (const k of ['ascii', 'hAnsi', 'cs', 'eastAsia']) wSet(fonts, k, st.font);
+    }
+    if (st.size) {
+      wSet(getOrAdd(rpr, 'sz', RPR_ORDER), 'val', String(st.size * 2));
+      wSet(getOrAdd(rpr, 'szCs', RPR_ORDER), 'val', String(st.size * 2));
+    }
+    if (st.bold) { setOn(rpr, 'b'); setOn(rpr, 'bCs'); }
+    if (st.italic) { setOn(rpr, 'i'); setOn(rpr, 'iCs'); }
+    wSet(c, 'val', st.color);
+  }
+  // Paragraph marks of answers (they colour automatic numbers): colour only, their size would change line heights.
+  for (const c of all(body, 'color')) {
+    if (isW(c.parentNode && c.parentNode.parentNode, 'pPr') && (wGet(c, 'val') || '').toUpperCase() === BLUE) wSet(c, 'val', st.color);
+  }
 }
 function setStrike(r, on) {
   const strike = getOrAdd(getOrAddRPr(r), 'strike', RPR_ORDER);
@@ -410,6 +456,7 @@ export async function generateDocx(data, templateBytes, { JSZip, DOMParser, XMLS
   fillApiTables(doc, api, v);
   replaceTokens(xml, tokenValues(data));
   insertEnclosures(doc, data);
+  applyTextStyle(xml, data.style);
   let out = new XMLSerializer().serializeToString(xml);
   if (!out.startsWith('<?xml')) out = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + out;
   zip.file('word/document.xml', out);

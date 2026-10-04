@@ -78,6 +78,12 @@ test('a new record keeps only the profile', () => {
   assert.deepStrictEqual([r.part2, r.teaching, r.enclosures, r.api], [{}, [], [], {}]);
 });
 
+test('a new record also keeps the text style (a personal preference)', () => {
+  const style = { color: '000000', font: 'Arial', size: 11, bold: false, italic: false };
+  assert.deepStrictEqual(S.newRecordFrom({ ...rec('2024-25'), style }, '2025-26').style, style);
+  assert.strictEqual(S.newRecordFrom(rec('2024-25'), '2025-26').style, undefined);
+});
+
 test('last year lookup: four cases', () => {
   const st = new FakeStore();
   assert.deepStrictEqual(S.lastYear(st, ''), { state: 'no-session', from: '', message: 'Choose the session first.' });

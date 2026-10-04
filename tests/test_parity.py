@@ -41,7 +41,9 @@ def records():
     no_title = copy(FULL)
     no_title['profile']['title'] = ''
     no_title['profile']['relation'] = ''
-    return {'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'empty': {}}
+    styled = copy(FULL)
+    styled['style'] = {'color': '1F3864', 'font': 'Georgia', 'size': 12, 'bold': True, 'italic': True}
+    return {'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'styled': styled, 'empty': {}}
 
 
 def run_text(r):
@@ -65,7 +67,7 @@ def run_props(r):
         e = el(tag)
         return None if e is None else e.get(qn('w:val')) not in ('0', 'false')
     c, f, s = el('w:color'), el('w:rFonts'), el('w:sz')
-    return (c.get(qn('w:val')) if c is not None else None, onoff('w:b'), onoff('w:strike'),
+    return (c.get(qn('w:val')) if c is not None else None, onoff('w:b'), onoff('w:i'), onoff('w:strike'),
             f.get(qn('w:ascii')) if f is not None else None, s.get(qn('w:val')) if s is not None else None)
 
 

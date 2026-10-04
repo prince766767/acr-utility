@@ -34,6 +34,56 @@ def set_cell(doc,ti,row,col,text):
 
 
 FORM_FONT='Times New Roman'
+STYLE_FONTS=('Times New Roman','Arial','Calibri','Cambria','Georgia','Verdana')  # also in Google Docs, so the PDF matches
+STYLE_SIZES=(10,11,12)
+DEFAULT_STYLE={'color':'0000CC','font':'','size':0,'bold':False,'italic':False}
+
+
+def normalize_style(style):
+    """The teacher's text style for filled-in answers; anything unknown falls back to today's look (blue, form fonts)."""
+    s=style if isinstance(style,dict) else {}
+    color=str(s.get('color') or '').lstrip('#').upper()
+    try: size=int(s.get('size') or 0)
+    except (TypeError,ValueError): size=0
+    return {'color':color if re.fullmatch(r'[0-9A-F]{6}',color) else DEFAULT_STYLE['color'],
+            'font':s.get('font') if s.get('font') in STYLE_FONTS else '',
+            'size':size if size in STYLE_SIZES else 0,
+            'bold':s.get('bold') is True,'italic':s.get('italic') is True}
+
+
+def apply_text_style(doc,style):
+    """Every filled-in answer is a blue (0000CC) run: give each the teacher's colour, font, size, bold and italic."""
+    st=normalize_style(style)
+    if st==DEFAULT_STYLE:
+        return
+    for r in list(doc.element.body.iter(qn('w:r'))):
+        rpr=r.find(qn('w:rPr'))
+        c=rpr.find(qn('w:color')) if rpr is not None else None
+        if c is None or (c.get(qn('w:val')) or '').upper()!='0000CC':
+            continue
+        run=Run(r,None)
+        if st['font']:
+            fonts=r.get_or_add_rPr().get_or_add_rFonts()
+            for k in list(fonts.attrib):
+                if k.endswith('Theme'): del fonts.attrib[k]
+            for k in ('w:ascii','w:hAnsi','w:cs','w:eastAsia'): fonts.set(qn(k),st['font'])
+        if st['size']:
+            run.font.size=Pt(st['size'])
+            rpr=r.find(qn('w:rPr'))
+            szcs=rpr.find(qn('w:szCs'))
+            if szcs is None:
+                from docx.oxml import OxmlElement
+                szcs=OxmlElement('w:szCs'); rpr.find(qn('w:sz')).addnext(szcs)
+            szcs.set(qn('w:val'),str(st['size']*2))
+        if st['bold']:
+            run.font.bold=True; run.font.cs_bold=True
+        if st['italic']:
+            run.font.italic=True; run.font.cs_italic=True
+        c.set(qn('w:val'),st['color'])
+    # Paragraph marks of answers (they colour automatic numbers): colour only, their size would change line heights.
+    for c in doc.element.body.iter(qn('w:color')):
+        if c.getparent().getparent().tag==qn('w:pPr') and (c.get(qn('w:val')) or '').upper()=='0000CC':
+            c.set(qn('w:val'),st['color'])
 
 
 def give_cell_font(p,r):
@@ -340,6 +390,7 @@ def generate(data,out_docx):
             for idx,label in enumerate(selected,1):
                 np=insert_at.insert_paragraph_before(f'☑ {idx}. {label}')
                 for r in np.runs: r.font.color.rgb=BLUE
+    apply_text_style(doc,data.get('style'))
     doc.save(out_docx)
     return v
 
