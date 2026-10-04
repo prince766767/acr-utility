@@ -18,3 +18,5 @@ small.over{color:var(--danger);font-weight:600}
 .problems li.warn{color:#8a5a00}
 .docx-box{margin-top:12px}
 .docx-box details{margin-top:8px}
+.docx-actions{display:flex;gap:8px;flex-wrap:wrap}
+#shareNowBtn{margin-top:4px}

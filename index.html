@@ -16,7 +16,7 @@
       <div id="userLine" class="muted">Personal ACR assistant</div>
     </div>
     <div class="top-actions">
-      <button id="signInBtn" class="secondary">Sign in with Google</button>
+      <button id="signInBtn" class="secondary hidden">Sign in with Google</button>
       <button id="signOutBtn" class="secondary hidden">Sign out</button>
     </div>
   </header>
@@ -298,13 +298,19 @@
           <h3>Problems to fix before the ACR can be generated</h3>
           <ul id="reviewProblems" class="problems"></ul>
           <div class="docx-box">
-            <button type="button" id="downloadDocxBtn">Download Word file (.docx)</button>
+            <div class="docx-actions">
+              <button type="button" id="downloadDocxBtn">Download Word file (.docx)</button>
+              <button type="button" id="shareBtn" class="hidden">Share / Email (DOCX + PDF)</button>
+              <button type="button" id="driveBtn" class="hidden">Save to Google Drive</button>
+            </div>
             <span id="docxReason" class="muted"></span>
             <p id="docxStatus" class="muted" role="status"></p>
+            <button type="button" id="shareNowBtn" class="secondary hidden">Open share menu</button>
             <details>
               <summary>Make a PDF or print on a phone</summary>
               <p><strong>Microsoft Word app:</strong> open the downloaded file, then the ⋯ (More) menu → <em>Save as</em> or <em>Export</em> → PDF; or ⋯ → <em>Print</em>.</p>
               <p><strong>Google Docs:</strong> open the file, then ⋮ → <em>Share &amp; export</em> → <em>Save as</em> → PDF document; or ⋮ → <em>Share &amp; export</em> → <em>Print</em>. Google Docs may lay some pages out slightly differently from Word.</p>
+              <p id="googleRouteHelp" class="hidden">Or use <em>Share / Email</em> or <em>Save to Google Drive</em> above (needs internet and a Google account; the PDF is made by Google Docs and may differ slightly from Word).</p>
             </details>
           </div>
           <p class="muted">On a PC the Word file can also be made with <code>python generate_acr.py &lt;exported file&gt; -o ACR.docx</code>; both give the same file.</p>

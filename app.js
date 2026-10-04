@@ -9,6 +9,9 @@ import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
 import { generateDocx, ProblemsError } from './docx_engine.js';
 import { acrFileName } from './file_names.js';
+import googleConfig from './google-config.js';
+import { loadGis, createTokenSource, createDrive, FOLDER_NAME } from './google_drive.js';
+import { shareFiles, downloadFile } from './share.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -29,6 +32,12 @@ try {
 
 const $=id=>document.getElementById(id);
 const form=$('acrForm');
+const SHOW_FIREBASE_SIGNIN=false; // header Google/Firebase sign-in is kept for the later cloud-sessions work
+const DOCX_MIME='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const googleReady=Boolean(googleConfig?.clientId)&&!googleConfig.clientId.startsWith('YOUR_');
+const googleTokens=googleReady?createTokenSource({clientId:googleConfig.clientId,gis:loadGis}):null;
+const drive=googleReady?createDrive({fetch:(...a)=>fetch(...a),getToken:o=>googleTokens.getToken(o)}):null;
+let docxBlocked=false, docxBusy=false, pendingShare=null;
 
 const enclosureDefaults=['Certificate / sanction order','FDP / Orientation / Refresher certificate','Conference / seminar certificate','Paper presentation / publication','Research project document','Degree / qualification certificate','Award / honour certificate','Other supporting document'];
 
@@ -153,7 +162,7 @@ function renderFieldProblems(d){
   const ul=$('reviewProblems'); ul.innerHTML='';
   const probs=[...fieldProblems(d),...tally(d.api).problems,...lastYearProblems(d.api.lastAcademicYear)];
   if(!lastYearCells(d.api.lastAcademicYear).cat1&&!lastYearProblems(d.api.lastAcademicYear).length){const w=document.createElement('li');w.className='warn';w.textContent='Last academic year figures are not filled in.';ul.appendChild(w);}
-  $('downloadDocxBtn').disabled=probs.length>0; $('docxReason').textContent=probs.length?'Fix the problems listed above first.':'';
+  docxBlocked=probs.length>0; syncDocxButtons(); $('docxReason').textContent=probs.length?'Fix the problems listed above first.':'';
   if(!probs.length){const li=document.createElement('li');li.className='ok';li.textContent='No problems. The ACR can be generated.';ul.appendChild(li);return;}
   for(const p of probs){const li=document.createElement('li');li.textContent=p.message;ul.appendChild(li);}
 }
@@ -184,28 +193,75 @@ $('session').addEventListener('change',()=>{
   else status.textContent=`Opened the ${target} record.`;
   openSession(target);
 });
-$('downloadDocxBtn').addEventListener('click',async()=>{
-  const status=$('docxStatus'), d=saveLocal();
-  status.textContent='Making the Word file…';
-  try{
-    const resp=await fetch('ACR_EMPLOYEE_MASTER.docx');
-    if(!resp.ok) throw new Error('The Word template could not be loaded.');
-    const bytes=new Uint8Array(await resp.arrayBuffer());
-    const out=await generateDocx(d,bytes,{JSZip:window.JSZip,DOMParser,XMLSerializer});
-    const name=acrFileName(d,'docx');
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
-    a.download=name; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
-    status.textContent=`Word file ready: ${name}`;
-  }catch(err){console.error(err); status.textContent=err instanceof ProblemsError?'Fix the problems listed above first.':(err.message||String(err));}
-});
+function syncDocxButtons(){for(const id of ['downloadDocxBtn','shareBtn','driveBtn','shareNowBtn'])$(id).disabled=docxBlocked||docxBusy;}
+async function makeDocx(d){
+  const resp=await fetch('ACR_EMPLOYEE_MASTER.docx');
+  if(!resp.ok) throw new Error('The Word template could not be loaded.');
+  const bytes=new Uint8Array(await resp.arrayBuffer());
+  const out=await generateDocx(d,bytes,{JSZip:window.JSZip,DOMParser,XMLSerializer});
+  return new File([out],acrFileName(d,'docx'),{type:DOCX_MIME});
+}
+const errText=err=>err instanceof ProblemsError?'Fix the problems listed above first.':(err?.message||String(err));
+// Runs one job at a time; job(say) returns the final status text, or a DOM node for it.
+async function runDocxJob(job){
+  if(docxBusy) return;
+  const status=$('docxStatus'); docxBusy=true; syncDocxButtons(); $('shareNowBtn').classList.add('hidden'); pendingShare=null;
+  try{const out=await job(t=>{status.textContent=t;}); status.replaceChildren(out);}
+  catch(err){console.error(err); status.textContent=errText(err);}
+  finally{docxBusy=false; syncDocxButtons();}
+}
+function offerShareTap(files,label){pendingShare=files; $('shareNowBtn').textContent=label; $('shareNowBtn').classList.remove('hidden');}
+// retry:false is for a result that follows a fresh tap on "Open share menu": offering the button again could loop forever.
+function shareResultText(result,files,{retry=true}={}){
+  if(result==='shared') return 'Share menu opened; the files went to the app you chose.';
+  if(result==='cancelled') return 'Sharing was cancelled.';
+  if(result==='needs-tap'&&retry){offerShareTap(files,'Open share menu'); return 'The files are ready. Tap "Open share menu".';}
+  if(result==='needs-tap'){files.forEach(f=>downloadFile(f)); return 'This browser would not share the files, so they were downloaded. Attach them to an email yourself.';}
+  return files.length>1?"This browser can't attach files to a share; both files were downloaded. Attach them to an email yourself.":"This browser can't attach files to a share; the file was downloaded. Attach it to an email yourself.";
+}
+async function pdfFor(d,docx){return new File([await drive.docxToPdf(docx)],acrFileName(d,'pdf'),{type:'application/pdf'});}
+
+$('downloadDocxBtn').addEventListener('click',()=>runDocxJob(async say=>{
+  const d=saveLocal(); say('Making the Word file…');
+  const docx=await makeDocx(d); downloadFile(docx);
+  return `Word file ready: ${docx.name}`;
+}));
+
+$('shareBtn').addEventListener('click',()=>runDocxJob(async say=>{
+  const d=saveLocal(); let signInError=null;
+  say('Signing in to Google…');
+  try{await googleTokens.getToken();}catch(err){signInError=err;} // first, while the tap still allows a pop-up
+  say('Making the Word file…');
+  const docx=await makeDocx(d);
+  let pdf=null;
+  if(!signInError){try{say('Making the PDF…'); pdf=await pdfFor(d,docx);}catch(err){signInError=err;}}
+  if(!pdf){console.error(signInError); offerShareTap([docx],'Share the Word file only'); return `The PDF could not be made: ${errText(signInError)} You can share the Word file only.`;}
+  const files=[docx,pdf];
+  return shareResultText(await shareFiles(files,{title:docx.name.replace(/\.docx$/,'')}),files);
+}));
+
+$('shareNowBtn').addEventListener('click',()=>{const files=pendingShare; if(!files) return; runDocxJob(async()=>shareResultText(await shareFiles(files,{title:files[0].name.replace(/\.docx$/,'')}),files,{retry:false}));});
+
+$('driveBtn').addEventListener('click',()=>runDocxJob(async say=>{
+  const d=saveLocal();
+  say('Signing in to Google…'); await googleTokens.getToken();
+  say('Making the Word file…'); const docx=await makeDocx(d);
+  say('Making the PDF…'); const pdf=await pdfFor(d,docx);
+  say('Uploading…'); const folderId=await drive.ensureFolder();
+  await drive.upsertFile({name:docx.name,bytes:docx,mime:DOCX_MIME,folderId});
+  await drive.upsertFile({name:pdf.name,bytes:pdf,mime:'application/pdf',folderId});
+  const p=document.createElement('span'); p.append(`Saved ${docx.name} and ${pdf.name} to Google Drive. `);
+  const a=document.createElement('a'); a.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`; a.target='_blank'; a.rel='noopener'; a.textContent=`Open the "${FOLDER_NAME}" folder`;
+  p.append(a); return p;
+}));
+
+if(googleReady){for(const id of ['shareBtn','driveBtn','googleRouteHelp'])$(id).classList.remove('hidden'); googleTokens.preload();}
 
 function updateProgress(){const d=collectSimple();let done=0,total=0;const must=[['fullName','Profile'],['employeeCode','Profile'],['subject','Profile'],['designation','Profile'],['p17','17'],['p18','18'],['p19b','19b'],['p21i','21i'],['p25','25']];must.forEach(([k])=>{total++; const v=d.profile[k]??d.part2[k]; if(String(v||'').trim())done++;}); total+=4; if(d.teaching.length)done++; if(d.assignments.length)done++; if(d.results.length)done++; if(d.enclosures.some(x=>x.checked))done++; const pct=Math.round(done/total*100);$('progressBar').style.width=`${pct}%`;$('progressText').textContent=`${pct}%`;}
 function renderReview(){const d=collectSimple();renderFieldProblems(d);const items=[['Session',d.session||'Not set'],['Employee',d.profile.fullName||'Not set'],['Employee Code',d.profile.employeeCode||'Not set'],['Teaching rows',d.teaching.length],['Exam result rows',d.results.length],['Selected enclosures',d.enclosures.filter(x=>x.checked).length],...apiReviewItems(d.api)];const box=$('reviewList');box.innerHTML='';items.forEach(([a,b])=>{const x=document.createElement('div');x.className='review-item';x.innerHTML=`<span>${escapeHtml(String(a))}</span><strong>${escapeHtml(String(b))}</strong>`;box.appendChild(x);});}
 function escapeHtml(s){return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');}
 
-if(firebaseReady){$('signInBtn').addEventListener('click',async()=>{const provider=new GoogleAuthProvider();await signInWithPopup(auth,provider);});$('signOutBtn').addEventListener('click',()=>signOut(auth));onAuthStateChanged(auth,async user=>{currentUser=user;if(user){$('userLine').textContent=user.email||'Signed in';$('signInBtn').classList.add('hidden');$('signOutBtn').classList.remove('hidden');try{await loadCloud();}catch(err){console.warn(err);$('syncStatus').textContent='Signed in; local draft is available even if cloud sync is unavailable.';}}else{$('userLine').textContent='Local draft mode';$('signInBtn').classList.remove('hidden');$('signOutBtn').classList.add('hidden');}});}else{$('signInBtn').disabled=true;$('signInBtn').title='Configure firebase-config.js first';}
+if(firebaseReady){$('signInBtn').addEventListener('click',async()=>{const provider=new GoogleAuthProvider();await signInWithPopup(auth,provider);});$('signOutBtn').addEventListener('click',()=>signOut(auth));onAuthStateChanged(auth,async user=>{currentUser=user;if(user){$('userLine').textContent=user.email||'Signed in';if(SHOW_FIREBASE_SIGNIN){$('signInBtn').classList.add('hidden');$('signOutBtn').classList.remove('hidden');}try{await loadCloud();}catch(err){console.warn(err);$('syncStatus').textContent='Signed in; local draft is available even if cloud sync is unavailable.';}}else{$('userLine').textContent='Local draft mode';if(SHOW_FIREBASE_SIGNIN){$('signInBtn').classList.remove('hidden');$('signOutBtn').classList.add('hidden');}}});}else{$('signInBtn').disabled=true;$('signInBtn').title='Configure firebase-config.js first';}
 
 if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(console.warn));
 initApiUi({getApi:()=>state.api,onChange:()=>{updateScores();saveLocal();}});
