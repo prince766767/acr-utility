@@ -11,7 +11,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from api_tally import tally, is_empty_entry, score_text, LEVEL_TEXT, last_year_problems, last_year_cells
 from docx.oxml.ns import qn
 from docx.text.run import Run
-from acr_fields import token_values, part_tables, field_problems, TITLES, RELATIONS
+from acr_fields import token_values, part_tables, field_problems, inline_marks, TITLES, RELATIONS
 
 HERE=Path(__file__).resolve().parent
 TEMPLATE=HERE/'ACR_EMPLOYEE_MASTER.docx'
@@ -406,6 +406,41 @@ def strike_unchosen(doc, starts_with, options, chosen):
     raise RuntimeError(f'Template: no line starting with "{starts_with}".')
 
 
+def write_run_text(r,text):
+    """Run content as text, tabs and line breaks (as setRunText in docx_engine.js)."""
+    for ch in [c for c in r if c.tag!=qn('w:rPr')]: r.remove(ch)
+    for part in re.split(r'(\t|\n)',text):
+        if part=='\t': etree.SubElement(r,W+'tab')
+        elif part=='\n': etree.SubElement(r,W+'br')
+        elif part:
+            t=etree.SubElement(r,W+'t'); t.text=part
+            if part.strip()!=part: t.set('{http://www.w3.org/XML/1998/namespace}space','preserve')
+
+
+def apply_inline_marks(doc):
+    """Answers (blue runs) marked **bold**, *italic* or ^superscript^: split into runs with that formatting."""
+    kinds={qn('w:t'):None,qn('w:tab'):'\t',qn('w:br'):'\n'}
+    for r in list(doc.element.body.iter(qn('w:r'))):
+        rpr=r.find(qn('w:rPr'))
+        c=rpr.find(qn('w:color')) if rpr is not None else None
+        if c is None or (c.get(qn('w:val')) or '').upper()!='0000CC': continue
+        content=[ch for ch in r if ch.tag!=qn('w:rPr')]
+        if any(ch.tag not in kinds for ch in content): continue
+        text=''.join((ch.text or '') if ch.tag==qn('w:t') else kinds[ch.tag] for ch in content)
+        if '*' not in text and '^' not in text: continue
+        segs=inline_marks(text)
+        if all(not fmt for _,fmt in segs): continue
+        for s,fmt in segs:
+            nr=deepcopy(r)
+            f=Run(nr,None).font
+            if 'b' in fmt: f.bold=True; f.cs_bold=True
+            if 'i' in fmt: f.italic=True; f.cs_italic=True
+            if 's' in fmt: f.superscript=True
+            write_run_text(nr,s)
+            r.addprevious(nr)
+        r.getparent().remove(r)
+
+
 def indent_point12(doc):
     """Point 12: every further line of the answer starts with a TAB, so it lands on the answer-column tab stop."""
     for p in doc.element.body.iter(qn('w:p')):
@@ -449,6 +484,7 @@ def generate(data,out_docx):
             for idx,label in enumerate(selected,1):
                 np=insert_at.insert_paragraph_before(f'☑ {idx}. {label}')
                 for r in np.runs: r.font.color.rgb=BLUE
+    apply_inline_marks(doc)
     apply_text_style(doc,data.get('style'))
     doc.save(out_docx)
     return v

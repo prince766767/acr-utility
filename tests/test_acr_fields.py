@@ -108,3 +108,11 @@ class CollegesServedNumbered(unittest.TestCase):
         self.assertEqual(token_values({'part2': {'p12': 'Govt College Alpha: 01/04/2031 to 31/03/2032'}})['COLLEGES_SERVED'], 'Govt College Alpha:\n01/04/2031 to 31/03/2032')
         self.assertEqual(token_values({'part2': {'p12': 'Govt College Alpha'}})['COLLEGES_SERVED'], 'Govt College Alpha')
         self.assertEqual(token_values({'part2': {'p12': '1. College A\n2. College B'}})['COLLEGES_SERVED'], '1. College A\n2. College B')
+
+
+class InlineMarks(unittest.TestCase):
+    def test_shared_cases(self):
+        from acr_fields import inline_marks
+        for text, expected in json.loads((ROOT / 'tests' / 'fixtures' / 'mark_cases.json').read_text(encoding='utf-8')):
+            with self.subTest(text):
+                self.assertEqual([list(x) for x in inline_marks(text)], expected)

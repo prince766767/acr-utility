@@ -42,3 +42,4 @@ small.over{color:var(--danger);font-weight:600}
 #importReport.hidden{display:none}
 .import-report{max-height:45vh;overflow:auto;font-size:.9rem;padding-left:18px}
 .import-report li{margin-bottom:6px;white-space:pre-wrap}
+.mark-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-weight:400}.mark-bar.hidden{display:none}.mark-bar button{min-width:36px;padding:4px 10px;background:#dbe8fb;color:#1f3864;border:1px solid #b9cff0;font-family:Georgia,serif}.mark-bar button[data-mark="**"]{font-weight:700}.mark-bar button[data-mark="*"]{font-style:italic}.mark-bar button:hover{background:#c9dcf7}.mark-hint{color:var(--muted);font-size:.8rem}

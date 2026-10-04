@@ -1,0 +1,16 @@
+[
+  ["plain text", [["plain text", ""]]],
+  ["a **bold** b", [["a ", ""], ["bold", "b"], [" b", ""]]],
+  ["*Botany* Hons", [["Botany", "i"], [" Hons", ""]]],
+  ["3^rd^ semester", [["3", ""], ["rd", "s"], [" semester", ""]]],
+  ["**bold *and italic* too**", [["bold ", "b"], ["and italic", "bi"], [" too", "b"]]],
+  ["5 * 3 * 2", [["5 * 3 * 2", ""]]],
+  ["a lone * star", [["a lone * star", ""]]],
+  ["** not bold **", [["** not bold **", ""]]],
+  ["open **never closed", [["open **never closed", ""]]],
+  ["line *one\ntwo* end", [["line *one\ntwo* end", ""]]],
+  ["*a*\n**b**", [["a", "i"], ["\n", ""], ["b", "b"]]],
+  ["x^2^ + y^2^", [["x", ""], ["2", "s"], [" + y", ""], ["2", "s"]]],
+  ["****", [["****", ""]]],
+  ["", []]
+]
