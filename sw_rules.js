@@ -4,3 +4,8 @@ function shouldCache(url, origin) {
   const u = new URL(url);
   return u.origin === origin || u.href.startsWith('https://www.gstatic.com/firebasejs/');
 }
+// The Client ID file changes after publishing, so it is fetched fresh (cache only as the offline fallback).
+function networkFirst(url, origin) {
+  const u = new URL(url);
+  return u.origin === origin && u.pathname.endsWith('/google-config.js');
+}
