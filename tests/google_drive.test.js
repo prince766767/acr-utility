@@ -125,13 +125,14 @@ test('non-JSON error replies still give a message', async () => {
 
 // --- token source ---
 function fakeOauth(replies) {
-  const o = { requests: [], config: null };
+  const o = { requests: [], config: null, hasGrantedAllScopes: (r, scope) => r.granted !== false };
   o.initTokenClient = cfg => {
     o.config = cfg;
     return {
       requestAccessToken: opts => {
         o.requests.push(opts);
         const r = replies.shift();
+        if (!r) return; // never calls back
         queueMicrotask(() => (r.type ? cfg.error_callback(r) : cfg.callback(r)));
       },
     };
@@ -173,5 +174,21 @@ test('closed popup, blocked popup and refusal give clear messages and allow a re
   await assert.rejects(src.getToken(), /closed before it finished/);
   await assert.rejects(src.getToken(), /pop-up was blocked/);
   await assert.rejects(src.getToken(), /refused \(access_denied\)/);
+  assert.equal(await src.getToken(), 'A');
+});
+
+test('a sign-in that never answers times out and allows a retry', async () => {
+  const replies = [null, { access_token: 'A', expires_in: 3600 }];
+  const oauth = fakeOauth(replies);
+  const src = createTokenSource({ clientId: 'CID', gis: async () => oauth, signInTimeoutMs: 20 });
+  await assert.rejects(src.getToken(), { message: 'Google sign-in did not finish. Please try again.' });
+  assert.equal(await src.getToken(), 'A');
+  assert.equal(oauth.requests.length, 2);
+});
+
+test('a token without Drive access is refused and not kept', async () => {
+  const oauth = fakeOauth([{ access_token: 'X', expires_in: 3600, granted: false }, { access_token: 'A', expires_in: 3600 }]);
+  const src = createTokenSource({ clientId: 'CID', gis: async () => oauth });
+  await assert.rejects(src.getToken(), { message: 'Google Drive access was not allowed. Please try again and tick the Google Drive box.' });
   assert.equal(await src.getToken(), 'A');
 });

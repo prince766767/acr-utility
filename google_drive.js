@@ -35,16 +35,17 @@ const SIGNIN_ERRORS = {
   popup_failed_to_open: 'The Google sign-in pop-up was blocked; allow pop-ups for this site and try again.',
 };
 
-export function createTokenSource({ clientId, gis, now = () => Date.now() }) {
-  let client = null, token = null, expiresAt = 0, pending = null, waiter = null;
+export function createTokenSource({ clientId, gis, now = () => Date.now(), signInTimeoutMs = 180000 }) {
+  let oauth2 = null, client = null, token = null, expiresAt = 0, pending = null, waiter = null;
   async function ready() {
     if (client) return;
-    const oauth2 = await gis();
+    oauth2 = await gis();
     client = oauth2.initTokenClient({
       client_id: clientId,
       scope: SCOPE,
       callback: r => {
         if (r.error) return waiter?.reject(new Error(`Google sign-in was refused (${r.error}).`));
+        if (!oauth2.hasGrantedAllScopes(r, SCOPE)) return waiter?.reject(new Error('Google Drive access was not allowed. Please try again and tick the Google Drive box.'));
         token = r.access_token;
         expiresAt = now() + Number(r.expires_in || 0) * 1000;
         waiter?.resolve(token);
@@ -58,7 +59,11 @@ export function createTokenSource({ clientId, gis, now = () => Date.now() }) {
     if (pending) return pending;
     pending = (async () => {
       await ready();
-      return await new Promise((resolve, reject) => { waiter = { resolve, reject }; client.requestAccessToken({ prompt: '' }); });
+      return await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Google sign-in did not finish. Please try again.')), signInTimeoutMs);
+        waiter = { resolve: v => { clearTimeout(timer); resolve(v); }, reject: e => { clearTimeout(timer); reject(e); } };
+        client.requestAccessToken({ prompt: '' });
+      });
     })().finally(() => { pending = null; waiter = null; });
     return pending;
   }
