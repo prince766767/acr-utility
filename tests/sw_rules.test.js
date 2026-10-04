@@ -27,6 +27,13 @@ test('Google APIs and sign-in are never cached', () => {
   ]) assert.equal(shouldCache(u, ORIGIN), false, u);
 });
 
+test('the earlier v0.4 utility is never cached (it always loads fresh, as before)', () => {
+  assert.equal(shouldCache('https://someone.github.io/acr-utility/v0.4/', ORIGIN), false);
+  assert.equal(shouldCache('https://someone.github.io/acr-utility/v0.4/index.html', ORIGIN), false);
+  assert.equal(shouldCache('https://someone.github.io/acr-utility/v0.4', ORIGIN), false); // GitHub redirects this to v0.4/
+  assert.equal(shouldCache('https://someone.github.io/acr-utility/v0.45.js', ORIGIN), true);
+});
+
 test('only the Client ID file is fetched network-first', () => {
   assert.equal(networkFirst('https://someone.github.io/acr/google-config.js', ORIGIN), true);
   assert.equal(networkFirst('https://someone.github.io/google-config.js', ORIGIN), true);

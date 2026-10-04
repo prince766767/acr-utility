@@ -4,3 +4,4 @@ _pdf_render/
 tests/out/
 .playwright-cli/
 node_modules/
+_site/

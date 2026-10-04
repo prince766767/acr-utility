@@ -20,3 +20,4 @@ small.over{color:var(--danger);font-weight:600}
 .docx-box details{margin-top:8px}
 .docx-actions{display:flex;gap:8px;flex-wrap:wrap}
 #shareNowBtn{margin-top:4px}
+.earlier-link{align-self:center;color:var(--blue);font-size:.9rem}
