@@ -308,5 +308,22 @@ class TemplateNoTextBoxesWhereGoogleBreaks(unittest.TestCase):
         # the generators address tables by position
         self.assertEqual(len(self.doc.tables), 44)
 
+
+class TemplateExactLinesWhereGoogleSpills(unittest.TestCase):
+    """Pages 13 (points 35-41) and 17 (Category-III table, part ii-C(i)) use exact line heights equal to Word's,
+    so Google Docs cannot lay them out taller; see tools/fix_template_google_lines.py."""
+    def test_no_auto_line_spacing_with_text_in_those_ranges(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from fix_template_google_lines import target_paragraphs
+        from docx.oxml.ns import qn
+        doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+        paras = target_paragraphs(list(doc.element.body))
+        self.assertGreater(len(paras), 30)
+        for p in paras:
+            if not ''.join(t.text or '' for t in p.iter(qn('w:t'))).strip():
+                continue
+            sp = p.find(qn('w:pPr') + '/' + qn('w:spacing'))
+            self.assertIn(sp.get(qn('w:lineRule')) if sp is not None else None, ('exact', 'atLeast'))
+
 if __name__ == '__main__':
     unittest.main()
