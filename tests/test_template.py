@@ -272,5 +272,41 @@ class TemplateGoogleDocsBreaks(unittest.TestCase):
             j += 1
         self.assertGreaterEqual(spacers, 1)
 
+
+class TemplateNoTextBoxesWhereGoogleBreaks(unittest.TestCase):
+    """Google Docs redraws Word text boxes in its own way; see tools/fix_template_textboxes.py."""
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+
+    def box_texts(self):
+        wps = '{http://schemas.microsoft.com/office/word/2010/wordprocessingShape}txbx'
+        from docx.oxml.ns import qn
+        return [' '.join(''.join(t.text or '' for t in b.iter(qn('w:t'))).split()) for b in self.doc.element.body.iter(wps)]
+
+    def test_note_45_is_a_bordered_paragraph_before_heading_45(self):
+        from docx.oxml.ns import qn
+        self.assertFalse([t for t in self.box_texts() if t.startswith('NOTE:- (*), (**)')])
+        body = list(self.doc.element.body)
+        heading = next(i for i, el in enumerate(body) if el.tag == qn('w:p') and 'SUMMARY OF API SCORES BY PRINCIPAL' in ' '.join(''.join(t.text or '' for t in el.iter(qn('w:t'))).split()))
+        p = body[heading - 1]
+        self.assertEqual(p.tag, qn('w:p'))
+        self.assertEqual(' '.join(''.join(t.text or '' for t in p.iter(qn('w:t'))).split()), 'NOTE:- (*), (**).. Please refer to clarification mentioned on page7950 of UGC Regulations (THE GAZETTE OF INDIA, September 18, 2010).')
+        bdr = p.find(qn('w:pPr') + '/' + qn('w:pBdr'))
+        self.assertEqual(sorted(c.tag.split('}')[1] for c in bdr), ['bottom', 'left', 'right', 'top'])
+
+    def test_part_iv_boxes_are_bordered_paragraphs(self):
+        from docx.oxml.ns import qn
+        for start in ('Teacher Name', 'Overall performance in percentage', 'Note:-'):
+            self.assertFalse([t for t in self.box_texts() if t.startswith(start)], start)
+            paras = [p for p in self.doc.element.body if p.tag == qn('w:p')
+                     and ' '.join(''.join(t.text or '' for t in p.iter(qn('w:t'))).split()).startswith(start)]
+            self.assertEqual(len(paras), 1, start)
+            self.assertIsNotNone(paras[0].find(qn('w:pPr') + '/' + qn('w:pBdr')), start)
+
+    def test_table_count_unchanged(self):
+        # the generators address tables by position
+        self.assertEqual(len(self.doc.tables), 44)
+
 if __name__ == '__main__':
     unittest.main()
