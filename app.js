@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import firebaseConfig from './firebase-config.js';
-import { tally, normalizeApi, emptyApi, lastYearProblems, lastYearCells } from './api_tally.js';
+import { tally, normalizeApi, emptyApi, lastYearProblems, lastYearCells, cleanScore, cleanCount } from './api_tally.js';
 import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
 import { parseDob, dobWords, fieldProblems, migrateDraft, ENCLOSURE_DEFAULTS } from './acr_fields.js';
 import * as sessions from './sessions.js';
@@ -171,6 +171,8 @@ function renderFieldProblems(d){
   if(!probs.length){const li=document.createElement('li');li.className='ok';li.textContent='No problems. The ACR can be generated.';ul.appendChild(li);return;}
   for(const p of probs){const li=document.createElement('li');li.textContent=p.message;ul.appendChild(li);}
 }
+// Scores that are counted and totalled take numbers only: cleaned before any other handler sees the value.
+document.addEventListener('input',e=>{const el=e.target; if(!el||!el.dataset) return; const clean='score' in el.dataset?cleanScore:'count' in el.dataset?cleanCount:null; if(clean){const v=clean(el.value); if(v!==el.value) el.value=v;}},true);
 form.addEventListener('input',()=>{clearPendingShare();updateScores();updateDobWords();saveLocal();});
 form.addEventListener('change',()=>{updateScores();saveLocal();});
 $('saveBtn').addEventListener('click',async()=>{try{if(firebaseReady&&currentUser)await saveCloud();else{saveLocal();$('syncStatus').textContent='Draft saved locally.';}}catch(err){console.error(err);$('syncStatus').textContent='Saved locally; cloud sync failed, so no work was lost.';}});

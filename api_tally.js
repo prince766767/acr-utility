@@ -98,6 +98,15 @@ export function normalizeApi(raw) {
 
 const SCORE_RE = /^[0-9]+(\.[0-9]{1,2})?$/;
 
+// What a score box keeps while the teacher types: digits and one decimal point, at most two decimals.
+export function cleanScore(v) {
+  const s = String(v ?? '').replace(/[^0-9.]/g, '');
+  const i = s.indexOf('.');
+  return i < 0 ? s : s.slice(0, i + 1) + s.slice(i + 1).replace(/\./g, '').slice(0, 2);
+}
+// What a count box keeps: digits only.
+export const cleanCount = v => String(v ?? '').replace(/[^0-9]/g, '');
+
 export function toCents(v) {
   if (v === undefined || v === null) return { state: 'missing' };
   let s;

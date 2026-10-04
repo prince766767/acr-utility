@@ -187,12 +187,12 @@
           <div class="section-heading"><div><h4>26(i) Lectures, seminars, tutorials, practicals, contact hours</h4></div><button type="button" class="secondary" data-api-add="c1.lectures">+ Add Course</button></div>
           <div id="list-c1-lectures" class="repeatable"></div>
           <div class="grid two">
-            <label>26(i)(a) Classes taken — API score (max 50)<input data-api-field="c1.classes" data-where="26(i)(a)" type="number" min="0" step="0.01" inputmode="decimal"></label>
-            <label>26(i)(b) Teaching load in excess of UGC norm — API score (max 10)<input data-api-field="c1.excess" data-where="26(i)(b)" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>26(i)(a) Classes taken — API score (max 50)<input data-api-field="c1.classes" data-where="26(i)(a)" type="text" inputmode="decimal" data-score></label>
+            <label>26(i)(b) Teaching load in excess of UGC norm — API score (max 10)<input data-api-field="c1.excess" data-where="26(i)(b)" type="text" inputmode="decimal" data-score></label>
           </div>
           <div class="section-heading"><div><h4>26(ii) Reading / instructional material consulted</h4></div><button type="button" class="secondary" data-api-add="c1.resources">+ Add Course</button></div>
           <div id="list-c1-resources" class="repeatable"></div>
-          <label>26(ii) API score (max 20)<input data-api-field="c1.resourcesScore" data-where="26(ii)" type="number" min="0" step="0.01" inputmode="decimal"></label>
+          <label>26(ii) API score (max 20)<input data-api-field="c1.resourcesScore" data-where="26(ii)" type="text" inputmode="decimal" data-score></label>
           <div class="section-heading"><div><h4>26(iii) Participatory &amp; innovative teaching-learning methods</h4></div><button type="button" class="secondary" data-api-add="c1.innovative">+ Add Item</button></div>
           <div id="list-c1-innovative" class="repeatable"></div>
           <div class="score-box">26(iii) total: <strong data-sum="p42.iii" data-max="20" data-where="26(iii) total"></strong></div>
@@ -234,16 +234,16 @@
           <h4>D. Research guidance</h4>
           <div class="grid guidance-grid">
             <strong>M.Phil or equivalent</strong>
-            <label>Number enrolled<input data-api-field="c3.guidance.mphilEnrolled" type="number" min="0" step="1"></label>
-            <label>Thesis submitted<input data-api-field="c3.guidance.mphilSubmitted" type="number" min="0" step="1"></label>
-            <label>Degree awarded<input data-api-field="c3.guidance.mphilAwarded" type="number" min="0" step="1"></label>
-            <label>API score — D(i), degree awarded (3 / candidate)<input data-api-field="c3.guidance.mphilScore" data-where="28 D M.Phil score" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>Number enrolled<input data-api-field="c3.guidance.mphilEnrolled" type="text" inputmode="numeric" data-count></label>
+            <label>Thesis submitted<input data-api-field="c3.guidance.mphilSubmitted" type="text" inputmode="numeric" data-count></label>
+            <label>Degree awarded<input data-api-field="c3.guidance.mphilAwarded" type="text" inputmode="numeric" data-count></label>
+            <label>API score — D(i), degree awarded (3 / candidate)<input data-api-field="c3.guidance.mphilScore" data-where="28 D M.Phil score" type="text" inputmode="decimal" data-score></label>
             <strong>Ph.D or equivalent</strong>
-            <label>Number enrolled<input data-api-field="c3.guidance.phdEnrolled" type="number" min="0" step="1"></label>
-            <label>Thesis submitted<input data-api-field="c3.guidance.phdSubmitted" type="number" min="0" step="1"></label>
-            <label>Degree awarded<input data-api-field="c3.guidance.phdAwarded" type="number" min="0" step="1"></label>
-            <label>API score — D(ii), degree awarded (10 / candidate)<input data-api-field="c3.guidance.phdAwardedScore" data-where="28 D Ph.D awarded score" type="number" min="0" step="0.01" inputmode="decimal"></label>
-            <label>API score — D(ii), thesis submitted (7 / candidate)<input data-api-field="c3.guidance.phdSubmittedScore" data-where="28 D Ph.D thesis submitted score" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>Number enrolled<input data-api-field="c3.guidance.phdEnrolled" type="text" inputmode="numeric" data-count></label>
+            <label>Thesis submitted<input data-api-field="c3.guidance.phdSubmitted" type="text" inputmode="numeric" data-count></label>
+            <label>Degree awarded<input data-api-field="c3.guidance.phdAwarded" type="text" inputmode="numeric" data-count></label>
+            <label>API score — D(ii), degree awarded (10 / candidate)<input data-api-field="c3.guidance.phdAwardedScore" data-where="28 D Ph.D awarded score" type="text" inputmode="decimal" data-score></label>
+            <label>API score — D(ii), thesis submitted (7 / candidate)<input data-api-field="c3.guidance.phdSubmittedScore" data-where="28 D Ph.D thesis submitted score" type="text" inputmode="decimal" data-score></label>
           </div>
           <div class="section-heading"><div><h4>E(i) Training courses, FDPs, refresher / orientation (max 30)</h4></div><button type="button" class="secondary" data-api-add="c3.training">+ Add Programme</button></div>
           <div id="list-c3-training" class="repeatable"></div>
@@ -259,9 +259,9 @@
           <h3>Last academic year (points 29 and 45, column 3)</h3>
           <p id="lyNote" class="muted"></p>
           <div class="grid two">
-            <label>I — Teaching, learning and evaluation (max 125)<input id="ly-cat1" type="number" min="0" step="0.01" inputmode="decimal"></label>
-            <label>II — Co-curricular, extension, professional development (max 25)<input id="ly-cat2" type="number" min="0" step="0.01" inputmode="decimal"></label>
-            <label>III — Research and academic contribution<input id="ly-cat3" type="number" min="0" step="0.01" inputmode="decimal"></label>
+            <label>I — Teaching, learning and evaluation (max 125)<input id="ly-cat1" type="text" inputmode="decimal" data-score></label>
+            <label>II — Co-curricular, extension, professional development (max 25)<input id="ly-cat2" type="text" inputmode="decimal" data-score></label>
+            <label>III — Research and academic contribution<input id="ly-cat3" type="text" inputmode="decimal" data-score></label>
             <div class="score-box">Total I + II: <strong id="ly-total12">—</strong></div>
           </div>
           <ul id="lyProblems" class="problems"></ul>

@@ -59,3 +59,17 @@ test('normalizeApi reports old flat fields and keeps other keys', () => {
   assert.deepStrictEqual(api.c3.journals, []);
   assert.strictEqual(api.apiC3, undefined);
 });
+
+test('score boxes keep only a number: digits, one point, two decimals; counts keep whole numbers', async () => {
+  const { cleanScore, cleanCount } = await import('../api_tally.js');
+  assert.equal(cleanScore('12.5'), '12.5');
+  assert.equal(cleanScore('1e5'), '15');
+  assert.equal(cleanScore('-3'), '3');
+  assert.equal(cleanScore('7.125'), '7.12');
+  assert.equal(cleanScore('1.2.3'), '1.23');
+  assert.equal(cleanScore('ten'), '');
+  assert.equal(cleanScore('.5'), '.5');
+  assert.equal(cleanScore('15 '), '15');
+  assert.equal(cleanCount('3.5'), '35');
+  assert.equal(cleanCount('2 students'), '2');
+});

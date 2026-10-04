@@ -59,7 +59,7 @@ function buildRow(path, entry, idx) {
       input.value = entry.row ?? '';
     } else {
       input = document.createElement('input');
-      if (kind === 'score') { input.type = 'number'; input.min = '0'; input.step = '0.01'; input.inputMode = 'decimal'; }
+      if (kind === 'score') { input.type = 'text'; input.inputMode = 'decimal'; input.dataset.score = ''; }   // cleaned to a number as typed (app.js)
       input.value = entry[key] ?? '';
     }
     input.addEventListener(kind === 'row' ? 'change' : 'input', () => { entry[key] = input.value; });
