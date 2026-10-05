@@ -51,7 +51,7 @@ class Tokens(unittest.TestCase):
     def test_full_record(self):
         v = token_values(FULL)
         self.assertEqual(set(v), set(TOKENS))
-        self.assertEqual(v['COLLEGE_PLACE'], 'District Beta, 171001')
+        self.assertEqual(v['COLLEGE_PLACE'], 'District Beta, State Epsilon, 171001')
         self.assertEqual(v['PAY_INFO'], 'Level 13A; Basic Pay 131400')
         self.assertEqual(v['PROMOTION'], 'No promotion')
         self.assertEqual(v['DOB_WORDS'], 'Fifth November Nineteen Hundred Eighty')

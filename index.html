@@ -65,7 +65,8 @@
           <p class="muted">Saved separately so recurring institutional details can be reused in future ACRs.</p>
           <div class="grid two">
             <label>College name<input name="collegeName"></label>
-            <label>District / State<input name="collegeDistrict"></label>
+            <label>State<select id="collegeStateChoice"><option value="hp">Himachal Pradesh</option><option value="other">Other state…</option></select><input id="collegeStateOther" class="hidden" placeholder="Type the name of the state" aria-label="Name of the state"><input type="hidden" name="collegeState" class="hidden"></label>
+            <label>District<select id="collegeDistrictList"></select><input id="collegeDistrictOther" class="hidden" placeholder="Type the name of the district" aria-label="Name of the district"><input type="hidden" name="collegeDistrict" class="hidden"></label>
             <label>PIN<input name="collegePin" inputmode="numeric"></label>
             <label>Principal name<input name="principalName"></label>
             <label>College address<textarea name="collegeAddress" rows="2"></textarea></label>

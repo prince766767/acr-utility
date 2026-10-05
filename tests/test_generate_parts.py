@@ -39,7 +39,7 @@ class GenerateParts(unittest.TestCase):
     def test_same_line_values(self):
         for label, value in [
             ('Name of the College through which ACR is submitted', 'Govt College Alpha'),
-            ('Name of the College through which ACR is submitted', 'District Beta, 171001'),
+            ('Name of the College through which ACR is submitted', 'District Beta, State Epsilon, 171001'),
             ('Submitted for the year/session', '2031-32'),
             ('Appraisal of work and conduct', 'ASHA DEVI'),
             ('Full Name (in Capital letter)', 'ASHA DEVI'),

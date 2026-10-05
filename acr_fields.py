@@ -140,7 +140,7 @@ def token_values(data):
     return {
         'SESSION': _s(data.get('session')),
         'COLLEGE_NAME': _s(p.get('collegeName')),
-        'COLLEGE_PLACE': _join(p.get('collegeDistrict'), p.get('collegePin')),
+        'COLLEGE_PLACE': _join(p.get('collegeDistrict'), p.get('collegeState'), p.get('collegePin')),
         'FULL_NAME': _s(p.get('fullName')),
         'FATHER_HUSBAND': _s(p.get('fatherHusband')),
         'EMPLOYEE_CODE': _s(p.get('employeeCode')),

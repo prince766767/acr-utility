@@ -13,7 +13,7 @@ for (const [c, u, expected] of read('variation_cases.json')) {
 test('tokenValues on the full record (same as test_acr_fields.py)', () => {
   const v = tokenValues(FULL);
   assert.deepStrictEqual(Object.keys(v), TOKENS);
-  assert.strictEqual(v.COLLEGE_PLACE, 'District Beta, 171001');
+  assert.strictEqual(v.COLLEGE_PLACE, 'District Beta, State Epsilon, 171001');
   assert.strictEqual(v.PAY_INFO, 'Level 13A; Basic Pay 131400');
   assert.strictEqual(v.PROMOTION, 'No promotion');
   assert.strictEqual(v.DOB_WORDS, 'Fifth November Nineteen Hundred Eighty');

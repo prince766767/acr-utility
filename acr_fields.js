@@ -159,7 +159,7 @@ export function tokenValues(data) {
   return {
     SESSION: s(d.session),
     COLLEGE_NAME: s(p.collegeName),
-    COLLEGE_PLACE: joinFilled([p.collegeDistrict, p.collegePin]),
+    COLLEGE_PLACE: joinFilled([p.collegeDistrict, p.collegeState, p.collegePin]),
     FULL_NAME: s(p.fullName),
     FATHER_HUSBAND: s(p.fatherHusband),
     EMPLOYEE_CODE: s(p.employeeCode),

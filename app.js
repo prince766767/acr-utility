@@ -15,6 +15,7 @@ import { shareFiles, downloadFile } from './share.js';
 import { createDraftSync } from './draft_sync.js';
 import { isV04, v04Docs, findV04Docs, convertV04 } from './import_v04.js';
 import { initMarks } from './marks_ui.js';
+import { initPlaceUi } from './place_ui.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -35,6 +36,7 @@ try {
 
 const $=id=>document.getElementById(id);
 const form=$('acrForm');
+const showPlace=initPlaceUi(form);
 const SHOW_FIREBASE_SIGNIN=false; // header Google/Firebase sign-in is kept for the later cloud-sessions work
 const DOCX_MIME='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const googleReady=Boolean(googleConfig?.clientId)&&!googleConfig.clientId.startsWith('YOUR_');
@@ -49,7 +51,7 @@ function collectSimple(){
   const data={session:state.session, profile:{}, part1:{}, part2:{}, api:state.api, ui:state.ui, enclosures:state.enclosures, teaching:state.teaching, assignments:state.assignments, results:state.results, activities:state.activities, orientation:state.orientation, research:state.research, otherInfo:state.otherInfo, style:state.style};
   form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{
     const n=el.name; const value=el.type==='number' ? (el.value===''?'':Number(el.value)) : el.value;
-    if(['collegeName','collegeDistrict','collegePin','principalName','collegeAddress','collegeOther','title','relation','fullName','fatherHusband','employeeCode','subject','appointmentDate','designation','payBand','basicPay','promotionDate','academicQualification','professionalQualification','researchDegree','dob','serviceStatus','landline','mobile','email','submissionDate','permanentAddress'].includes(n)) data.profile[n]=value;
+    if(['collegeName','collegeState','collegeDistrict','collegePin','principalName','collegeAddress','collegeOther','title','relation','fullName','fatherHusband','employeeCode','subject','appointmentDate','designation','payBand','basicPay','promotionDate','academicQualification','professionalQualification','researchDegree','dob','serviceStatus','landline','mobile','email','submissionDate','permanentAddress'].includes(n)) data.profile[n]=value;
     else if(n.startsWith('p')) data.part2[n]=value;
     else if(n==='totalPeriodsPerWeek'||n==='researchYesNo'||n.startsWith('research')) data.part2[n]=value;
   });
@@ -66,6 +68,7 @@ function applySimple(raw){
     else if(el.tagName==='SELECT') el.selectedIndex=0;
     else el.value='';
   });
+  showPlace();
   state.style=normalizeStyle(data.style); renderStyleControls();
   state.session=data.session||''; state.profile=data.profile||{}; state.part1=data.part1||{}; state.part2=data.part2||{}; state.api=apiData; state.teaching=data.teaching||[]; state.assignments=data.assignments||[]; state.results=data.results||[]; state.activities=data.activities; state.orientation=data.orientation; state.research=data.research; state.otherInfo=data.otherInfo; state.enclosures=data.enclosures||[]; state.ui=data.ui||{section:'profile'};
   renderRepeatables(); renderEnclosures(); renderApiLists(); showLegacyNotice(legacy); showPartNotice(notices); updateDobWords(); updateScores(); switchSection(state.ui.section||'profile');

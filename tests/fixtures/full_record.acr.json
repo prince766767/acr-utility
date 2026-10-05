@@ -1,7 +1,7 @@
 {
   "session": "2031-32",
   "profile": {
-    "collegeName": "Govt College Alpha", "collegeDistrict": "District Beta", "collegePin": "171001", "principalName": "Dr Principal Gamma",
+    "collegeName": "Govt College Alpha", "collegeDistrict": "District Beta", "collegeState": "State Epsilon", "collegePin": "171001", "principalName": "Dr Principal Gamma",
     "collegeAddress": "", "collegeOther": "",
     "title": "Smt", "relation": "Husband", "fullName": "ASHA DEVI", "fatherHusband": "RAM LAL", "employeeCode": "EC-4321",
     "subject": "Chemistry", "appointmentDate": "01/07/2012", "designation": "Associate Professor", "payBand": "Level 13A",

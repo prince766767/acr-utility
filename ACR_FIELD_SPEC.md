@@ -22,7 +22,8 @@ The source explicitly defines Part-I personal data (Points 1–16), Part-II self
 ## Persistent profiles
 ### College profile
 - College name
-- District/State
+- State (Himachal Pradesh by default, or typed)
+- District (list of the 12 HP districts, or typed for another state)
 - PIN
 - Address
 - Principal name
