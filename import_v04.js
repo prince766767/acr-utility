@@ -80,7 +80,7 @@ export function convertV04(doc) {
   p('p13a', [s(p1.deptExamRoll), s(p1.deptExamSession)].filter(Boolean).join(', '));
   p('p13b', p1.hindi); p('p14', p1.otherAssignment);
   p('p17', s1.q17); p('p18', s1.q18); p('p19b', s1.q19b); p('p19g', s1.q19g); p('p21i', s1.q21i); p('p23', s1.q23); p('p25', s1.q25);
-  if (n(s1.q19aTotal) !== '') part2.totalPeriodsPerWeek = n(s1.q19aTotal);
+  if (s(s1.q19aTotal)) part2.totalPeriodsPerWeek = s(s1.q19aTotal);
   p('p19f', arr(s1.q19f).map(b => {
     const head = [s(b.title), [s(b.author), s(b.publisher), s(b.pages) ? `${s(b.pages)} pages` : ''].filter(Boolean).join(', ')].filter(Boolean).join(' – ');
     return [head, s(b.extract)].filter(Boolean).join('\n');
@@ -90,7 +90,7 @@ export function convertV04(doc) {
   p('p24Satisfied', yesNo(s1.q24)); p('p24Reasons', s1.q24b);
   if (s(s1.q24) && !yesNo(s1.q24)) note('24. Satisfied? answer (choose Yes / No again)', s1.q24);
 
-  const teaching = arr(s1.q19a).map((r, i) => ({ srNo: i + 1, classCourse: s(r.cls), college: s(r.college), allocated: n(r.allocated), delivered: n(r.delivered), syllabusPct: n(r.syllabus) }));
+  const teaching = arr(s1.q19a).map((r, i) => ({ srNo: i + 1, classCourse: s(r.cls), college: s(r.college), allocated: s(r.allocated), delivered: s(r.delivered), syllabusPct: s(r.syllabus) }));
   const assignments = arr(s1.q19c).map(r => ({ classCourse: s(r.cls), assignments: n(r.assignments), tests: n(r.tests) }));
   const activities = arr(s1.q19d).map(r => ({ title: s(r.title), detail: s(r.detail) }));
   const results = arr(s1.q20).map(r => {

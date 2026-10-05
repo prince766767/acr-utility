@@ -112,10 +112,10 @@ test('identity and Part-I', () => {
 test('Part-II and its tables', () => {
   const p = R.part2;
   assert.deepEqual([p.p17, p.p18, p.p19b, p.p19g, p.p21i, p.p23, p.p25], ['Contribution', 'Unassigned work', 'Special effort', 'Problem 1\nProblem 2', 'None', 'Best teacher award', 'Other point']);
-  assert.equal(p.totalPeriodsPerWeek, 24);
+  assert.equal(p.totalPeriodsPerWeek, '24');
   assert.equal(p.p19f, 'Book A – X, P, 200 pages\nAbout fifty words.');
   assert.deepEqual([p.researchYesNo, p.p24Satisfied, p.p24Reasons], ['Yes', 'No', 'Want promotion']);
-  assert.deepEqual(R.teaching, [{ srNo: 1, classCourse: 'B.Sc. I', college: 'GCA', allocated: 6, delivered: 150, syllabusPct: 95 }]);
+  assert.deepEqual(R.teaching, [{ srNo: 1, classCourse: 'B.Sc. I', college: 'GCA', allocated: '6', delivered: '150', syllabusPct: '95%' }]);
   assert.deepEqual(R.assignments, [{ classCourse: 'B.Sc. I', assignments: 3, tests: 2 }]);
   assert.deepEqual(R.activities, [{ title: 'Chem Quiz', detail: 'Inter-class quiz' }]);
   assert.deepEqual(R.results, [{ className: 'B.Sc. III', duration: '1 year', appeared: 40, passed: 38, collegePct: 95, universityPct: 88.5, divI: 10, divII: 20, divIII: 8, failed: 2, reason: '--' }]);

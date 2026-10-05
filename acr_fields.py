@@ -194,7 +194,7 @@ def part_tables(data):
     for i, e in enumerate(_rows(data, 'teaching'), 1):
         pct = _s(e.get('syllabusPct'))
         teaching.append([_s(e.get('srNo')) or str(i), _s(e.get('classCourse')), _s(e.get('college')),
-                         _s(e.get('allocated')), _s(e.get('delivered')), pct if not pct or pct.endswith('%') else pct + '%'])
+                         _s(e.get('allocated')), _s(e.get('delivered')), pct + '%' if re.fullmatch(r'\d+(\.\d+)?', pct) else pct])  # % only after a plain number
     results = []
     for e in _rows(data, 'results'):
         var = variation(e.get('collegePct'), e.get('universityPct'))

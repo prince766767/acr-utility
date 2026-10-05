@@ -212,7 +212,7 @@ export function partTables(data) {
     teaching: rows(d, 'teaching').map((e, i) => {
       const pct = s(e.syllabusPct);
       return [s(e.srNo) || String(i + 1), s(e.classCourse), s(e.college), s(e.allocated), s(e.delivered),
-        !pct || pct.endsWith('%') ? pct : pct + '%'];
+        /^\d+(\.\d+)?$/.test(pct) ? pct + '%' : pct];   // % only after a plain number; text prints as typed
     }),
     total_periods: s(a.totalPeriodsPerWeek),
     assignments: rows(d, 'assignments').map((e, i) => [String(i + 1), s(e.classCourse), s(e.assignments), s(e.tests), '']),

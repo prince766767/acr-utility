@@ -93,6 +93,12 @@ class Tables(unittest.TestCase):
         self.assertEqual(t['other_info'], [['1', 'Y']])
         self.assertEqual(t['dob_digits'], '')
 
+    def test_teaching_text_and_percent_only_on_plain_number(self):
+        t = part_tables({'teaching': [{'allocated': '4L + 2P', 'delivered': '60 (Theory)', 'syllabusPct': 'Completed'}, {'syllabusPct': '90.5'}, {'syllabusPct': '90% (Theory)'}],
+                         'part2': {'totalPeriodsPerWeek': '18 + 6 (Practical)'}})
+        self.assertEqual(t['teaching'], [['1', '', '', '4L + 2P', '60 (Theory)', 'Completed'], ['2', '', '', '', '', '90.5%'], ['3', '', '', '', '', '90% (Theory)']])
+        self.assertEqual(t['total_periods'], '18 + 6 (Practical)')
+
 
 if __name__ == '__main__':
     unittest.main()

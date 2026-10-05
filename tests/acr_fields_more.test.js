@@ -39,3 +39,10 @@ test('partTables on the full record (same as test_acr_fields.py)', () => {
   const e = partTables({ teaching: [{}, { classCourse: 'X', syllabusPct: '80%' }], otherInfo: [{ text: ' ' }, { text: 'Y' }] });
   assert.deepStrictEqual([e.teaching, e.other_info, e.dob_digits], [[['1', 'X', '', '', '', '80%']], [['1', 'Y']], '']);
 });
+
+test('19(a) boxes take text; % is added only to a plain number', () => {
+  const t = partTables({ teaching: [{ allocated: '4L + 2P', delivered: '60 (Theory)', syllabusPct: 'Completed' }, { syllabusPct: '90.5' }, { syllabusPct: '90% (Theory)' }],
+    part2: { totalPeriodsPerWeek: '18 + 6 (Practical)' } });
+  assert.deepStrictEqual(t.teaching, [['1', '', '', '4L + 2P', '60 (Theory)', 'Completed'], ['2', '', '', '', '', '90.5%'], ['3', '', '', '', '', '90% (Theory)']]);
+  assert.strictEqual(t.total_periods, '18 + 6 (Practical)');
+});
