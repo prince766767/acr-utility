@@ -190,6 +190,7 @@ def part_tables(data):
     data = _dict(data)
     p, a = _dict(data.get('profile')), _dict(data.get('part2'))
     state, dob = parse_dob(p.get('dob'))
+    same19c = _s(a.get('p19cSame')) == 'yes'
     teaching = []
     for i, e in enumerate(_rows(data, 'teaching'), 1):
         pct = _s(e.get('syllabusPct'))
@@ -204,8 +205,11 @@ def part_tables(data):
         'dob_digits': dob_digits(*dob) if state == 'ok' else '',
         'teaching': teaching,
         'total_periods': _s(a.get('totalPeriodsPerWeek')),
-        'assignments': [[str(i), _s(e.get('classCourse')), _s(e.get('assignments')), _s(e.get('tests')), '']
+        # 19(c) 5th column: each row's own record, or one common record shown in a merged cell over the filled rows.
+        'assignments': [[str(i), _s(e.get('classCourse')), _s(e.get('assignments')), _s(e.get('tests')),
+                         (_s(a.get('p19cRecord')) if i == 1 else '') if same19c else _s(e.get('record'))]
                         for i, e in enumerate(_rows(data, 'assignments'), 1)],
+        'assignments_merged': same19c and len(_rows(data, 'assignments')) > 1,
         'activities': [[_s(e.get('title')), _s(e.get('detail'))] for e in _rows(data, 'activities')],
         'results': results,
         'orientation': [[_s(e.get(k)) for k in ('course', 'place', 'duration', 'rcoc')] for e in _rows(data, 'orientation')],

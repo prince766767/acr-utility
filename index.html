@@ -143,6 +143,8 @@
             <div><h3>19(c). Assignments and Class Tests</h3></div>
             <button type="button" class="secondary" data-add="assignments">+ Add Class</button>
           </div>
+          <label class="checkitem"><input type="checkbox" name="p19cSame" value="yes"> Same record for all classes (one merged cell)</label>
+          <label id="p19cRecordBox" class="hidden">Common record in College Office<input name="p19cRecord"></label>
           <div id="assignmentRows" class="repeatable"></div>
         </div>
 
@@ -339,10 +341,11 @@
   </template>
 
   <template id="assignmentTemplate">
-    <div class="repeat-row compact">
+    <div class="repeat-row record-row">
       <div><label>Class / course<input data-key="classCourse"></label></div>
-      <div><label>Assignments<input data-key="assignments" type="number" min="0"></label></div>
-      <div><label>Class tests<input data-key="tests" type="number" min="0"></label></div>
+      <div><label>Assignments<input data-key="assignments"></label></div>
+      <div><label>Class tests<input data-key="tests"></label></div>
+      <div class="record-box"><label>Record in College Office<input data-key="record"></label></div>
       <button type="button" class="danger remove-row">Remove</button>
     </div>
   </template>

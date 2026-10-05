@@ -10,6 +10,7 @@ from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from api_tally import tally, is_empty_entry, score_text, LEVEL_TEXT, last_year_problems, last_year_cells
 from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from docx.text.run import Run
 from acr_fields import token_values, part_tables, field_problems, inline_marks, TITLES, RELATIONS
 
@@ -127,6 +128,19 @@ def fill_rows(doc,ti,rows,start=1):
     for i,row in enumerate(rows):
         vals=row if isinstance(row,list) else [row.get(str(c),'') for c in range(len(t.columns))]
         for c in range(len(t.columns)): set_cell(doc,ti,start+i,c, vals[c] if c<len(vals) else '')
+
+
+def merge_down(doc,ti,col,first,last):
+    """One merged cell (Word vMerge) in column col over rows first..last; its text is the first row's. As mergeDown in docx_engine.js."""
+    t=doc.tables[ti]
+    tcs=[t.cell(r,col)._tc for r in range(first,last+1)]   # all found before any is merged
+    for k,tc in enumerate(tcs):
+        tcpr=tc.get_or_add_tcPr()
+        v=OxmlElement('w:vMerge')
+        v.set(qn('w:val'),'restart' if k==0 else 'continue')
+        anchor=next((e for e in (tcpr.find(qn('w:gridSpan')),tcpr.find(qn('w:tcW'))) if e is not None),None)
+        if anchor is not None: anchor.addnext(v)
+        else: tcpr.insert(0,v)
 
 
 class ProblemsError(Exception):
@@ -381,6 +395,8 @@ def fill_part_tables(doc, t):
     set_cell(doc, 1, find_row(T[1], 0, 'Total periods per week'), 3, t['total_periods'])
     _check(_norm(T[2].rows[0].cells[0].text).startswith('Sr.'), 2, 'the 19(c) header')
     fill_rows(doc, 2, t['assignments'], 1)
+    if t['assignments_merged']:
+        merge_down(doc, 2, 4, 1, len(t['assignments']))
     _check(_norm(T[3].rows[0].cells[0].text).startswith('Titleoftheactivity'), 3, 'the 19(d) header')
     fill_rows(doc, 3, t['activities'], 1)
     _check(_norm(T[4].rows[2].cells[0].text) == '1', 4, 'the column-number row of point 20')

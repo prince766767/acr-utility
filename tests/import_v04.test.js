@@ -116,7 +116,7 @@ test('Part-II and its tables', () => {
   assert.equal(p.p19f, 'Book A – X, P, 200 pages\nAbout fifty words.');
   assert.deepEqual([p.researchYesNo, p.p24Satisfied, p.p24Reasons], ['Yes', 'No', 'Want promotion']);
   assert.deepEqual(R.teaching, [{ srNo: 1, classCourse: 'B.Sc. I', college: 'GCA', allocated: '6', delivered: '150', syllabusPct: '95%' }]);
-  assert.deepEqual(R.assignments, [{ classCourse: 'B.Sc. I', assignments: 3, tests: 2 }]);
+  assert.deepEqual(R.assignments, [{ classCourse: 'B.Sc. I', assignments: '3', tests: '2', record: 'Register p. 12' }]);
   assert.deepEqual(R.activities, [{ title: 'Chem Quiz', detail: 'Inter-class quiz' }]);
   assert.deepEqual(R.results, [{ className: 'B.Sc. III', duration: '1 year', appeared: 40, passed: 38, collegePct: 95, universityPct: 88.5, divI: 10, divII: 20, divIII: 8, failed: 2, reason: '--' }]);
   assert.deepEqual(R.orientation, [{ course: 'Refresher Course, UGC', place: 'HRDC Shimla', duration: '21 days', rcoc: 'RC-1' }]);
@@ -158,7 +158,8 @@ test('arts slabs for ongoing projects', () => {
 
 test('everything not carried over is in the report, with its text', () => {
   const text = report.join('\n');
-  for (const s of ['Practical is two hours.', 'Register p. 12', 'Footnote text', '(override)', '100', 'Encl.', 'Candidates A, B', 'Alpha']) {
+  assert.ok(!text.includes('Register p. 12'), 'the 19(c) record now comes over, so it is not reported');
+  for (const s of ['Practical is two hours.', 'Footnote text', '(override)', '100', 'Encl.', 'Candidates A, B', 'Alpha']) {
     assert.ok(text.includes(s), s);
   }
 });

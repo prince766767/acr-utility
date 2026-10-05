@@ -21,7 +21,7 @@
     {"srNo": 1, "classCourse": "B.Sc. I", "college": "GCA", "allocated": 6, "delivered": 150, "syllabusPct": 100},
     {"classCourse": "B.Sc. II", "college": "GCA", "allocated": 6, "delivered": 140, "syllabusPct": "95"}
   ],
-  "assignments": [{"classCourse": "B.Sc. I", "assignments": 4, "tests": 2}],
+  "assignments": [{"classCourse": "B.Sc. I", "assignments": 4, "tests": 2, "record": "Register p. 12"}],
   "activities": [{"title": "Chem Quiz", "detail": "Inter-class quiz"}],
   "results": [{"className": "B.Sc. III", "duration": "1 year", "appeared": 40, "passed": 38, "collegePct": "95", "universityPct": "88.5",
                "divI": 10, "divII": 20, "divIII": 8, "failed": 2, "reason": ""}],

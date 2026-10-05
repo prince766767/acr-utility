@@ -33,11 +33,23 @@ test('partTables on the full record (same as test_acr_fields.py)', () => {
   assert.strictEqual(t.dob_digits, '05111980');
   assert.deepStrictEqual(t.teaching, [['1', 'B.Sc. I', 'GCA', '6', '150', '100%'], ['2', 'B.Sc. II', 'GCA', '6', '140', '95%']]);
   assert.strictEqual(t.total_periods, '24');
-  assert.deepStrictEqual(t.assignments, [['1', 'B.Sc. I', '4', '2', '']]);
+  assert.deepStrictEqual(t.assignments, [['1', 'B.Sc. I', '4', '2', 'Register p. 12']]);
   assert.deepStrictEqual(t.results, [['B.Sc. III', '1 year', '40', '38', '95', '88.5', '+6.5', '+6.5', '10', '20', '8', '2', '']]);
   assert.deepStrictEqual(t.other_info, [['1', 'Reviewer for journal X']]);
   const e = partTables({ teaching: [{}, { classCourse: 'X', syllabusPct: '80%' }], otherInfo: [{ text: ' ' }, { text: 'Y' }] });
   assert.deepStrictEqual([e.teaching, e.other_info, e.dob_digits], [[['1', 'X', '', '', '', '80%']], [['1', 'Y']], '']);
+});
+
+test('19(c): text entries, each row its own record, or one common record in a merged cell', () => {
+  const rows = [{ classCourse: 'B.Sc. I', assignments: '4 (2 oral)', tests: '2', record: 'Reg A' }, { classCourse: 'B.Sc. II', assignments: '3', tests: '1', record: 'Reg B' }];
+  const own = partTables({ assignments: rows });
+  assert.deepStrictEqual(own.assignments, [['1', 'B.Sc. I', '4 (2 oral)', '2', 'Reg A'], ['2', 'B.Sc. II', '3', '1', 'Reg B']]);
+  assert.strictEqual(own.assignments_merged, false);
+  const same = partTables({ assignments: rows, part2: { p19cSame: 'yes', p19cRecord: 'Assignment & Test Register' } });
+  assert.deepStrictEqual(same.assignments, [['1', 'B.Sc. I', '4 (2 oral)', '2', 'Assignment & Test Register'], ['2', 'B.Sc. II', '3', '1', '']]);
+  assert.strictEqual(same.assignments_merged, true);
+  const one = partTables({ assignments: rows.slice(0, 1), part2: { p19cSame: 'yes', p19cRecord: 'Common' } });
+  assert.deepStrictEqual([one.assignments, one.assignments_merged], [[['1', 'B.Sc. I', '4 (2 oral)', '2', 'Common']], false]);
 });
 
 test('19(a) boxes take text; % is added only to a plain number', () => {

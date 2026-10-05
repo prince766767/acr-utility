@@ -95,12 +95,27 @@ class GenerateParts(unittest.TestCase):
         self.assertEqual(cells(1, 2), ['2', 'B.Sc. II', 'GCA', '6', '140', '95%'])
         self.assertEqual(cells(1, len(T[1].rows) - 1)[0], 'Total periods per week')
         self.assertEqual(cells(1, len(T[1].rows) - 1)[3], '24')
-        self.assertEqual(cells(2, 1), ['1', 'B.Sc. I', '4', '2', ''])
+        self.assertEqual(cells(2, 1), ['1', 'B.Sc. I', '4', '2', 'Register p. 12'])
         self.assertEqual(cells(3, 1), ['Chem Quiz', 'Inter-class quiz'])
         self.assertEqual(cells(4, 3), ['B.Sc. III', '1 year', '40', '38', '95', '88.5', '+6.5', '+6.5', '10', '20', '8', '2', ''])
         self.assertEqual(cells(5, 1), ['Refresher in Chemistry, UGC', 'HRDC Shimla', '21 days', 'RC-7'])
         self.assertEqual(cells(6, 1), ['Green synthesis', 'HPU', 'Minor', 'Ongoing'])
         self.assertEqual(cells(24, 1), ['1', 'Reviewer for journal X'])
+
+    def test_19c_common_record_is_one_merged_cell(self):
+        rec = json.loads(json.dumps(FULL))
+        rec['assignments'] = [{'classCourse': f'C{i}', 'assignments': '1', 'tests': '1', 'record': f'own {i}'} for i in range(1, 4)]
+        rec['part2'].update(p19cSame='yes', p19cRecord='Assignment & Test Register')
+        generate_acr.generate(rec, self.tmp / 'merged.docx')
+        t = Document(self.tmp / 'merged.docx').tables[2]
+        vm = []
+        for tr in t._tbl.tr_lst:
+            tcpr = tr.tc_lst[4].tcPr
+            v = tcpr.find(qn('w:vMerge')) if tcpr is not None else None
+            vm.append(None if v is None else (v.get(qn('w:val')) or 'continue'))
+        self.assertEqual(vm, [None, 'restart', 'continue', 'continue', None])   # header, 3 classes merged, unused row apart
+        self.assertEqual(t.cell(2, 4).text, 'Assignment & Test Register')
+        self.assertEqual(t.cell(4, 4).text, '')
 
     def test_no_token_left_and_enclosures(self):
         full = ' '.join(t.text or '' for t in self.doc.element.body.iter(qn('w:t')))

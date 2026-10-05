@@ -269,6 +269,19 @@ function fillRows(doc, ti, rows, start = 1) {
   for (let k = 0; k < rows.length - existing; k++) cloneRow(t, start);
   rows.forEach((row, i) => { for (let c = 0; c < t.colCount; c++) setCell(doc, ti, start + i, c, c < row.length ? row[c] : ''); });
 }
+// One merged cell (Word vMerge) in column col over rows first..last; its text is the first row's. As merge_down in generate_acr.py.
+function mergeDown(doc, ti, col, first, last) {
+  const t = doc.tables[ti], tcs = [];
+  for (let r = first; r <= last; r++) tcs.push(t.cell(r, col));   // all found before any is merged
+  tcs.forEach((tc, k) => {
+    let tcPr = kid(tc, 'tcPr');
+    if (!tcPr) tcPr = tc.insertBefore(wEl(doc.xml, 'tcPr'), tc.firstChild);
+    const v = wEl(doc.xml, 'vMerge');
+    wSet(v, 'val', k === 0 ? 'restart' : 'continue');
+    const anchor = kid(tcPr, 'gridSpan') || kid(tcPr, 'tcW');
+    if (anchor) insertAfter(anchor, v); else tcPr.insertBefore(v, tcPr.firstChild);
+  });
+}
 function findRow(table, col, prefix, start = 0) {
   for (let r = start; r < table.rows.length; r++) if (norm(table.text(r, col)).startsWith(norm(prefix))) return r;
   throw new Error(`Template: no row starting with "${prefix}" in column ${col}.`);
@@ -409,6 +422,7 @@ function fillPartTables(doc, t) {
   setCell(doc, 1, findRow(doc.tables[1], 0, 'Total periods per week'), 3, t.total_periods);
   check(norm(T[2].text(0, 0)).startsWith('Sr.'), 2, 'the 19(c) header');
   fillRows(doc, 2, t.assignments, 1);
+  if (t.assignments_merged) mergeDown(doc, 2, 4, 1, t.assignments.length);
   check(norm(T[3].text(0, 0)).startsWith('Titleoftheactivity'), 3, 'the 19(d) header');
   fillRows(doc, 3, t.activities, 1);
   check(norm(T[4].text(2, 0)) === '1', 4, 'the column-number row of point 20');

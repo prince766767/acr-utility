@@ -207,6 +207,7 @@ export function partTables(data) {
   const d = obj(data), p = obj(d.profile), a = obj(d.part2);
   const dob = parseDob(p.dob);
   const two = n => String(n).padStart(2, '0');
+  const same19c = s(a.p19cSame) === 'yes';
   return {
     dob_digits: dob.state === 'ok' ? `${two(dob.d)}${two(dob.m)}${String(dob.y).padStart(4, '0')}` : '',
     teaching: rows(d, 'teaching').map((e, i) => {
@@ -215,7 +216,10 @@ export function partTables(data) {
         /^\d+(\.\d+)?$/.test(pct) ? pct + '%' : pct];   // % only after a plain number; text prints as typed
     }),
     total_periods: s(a.totalPeriodsPerWeek),
-    assignments: rows(d, 'assignments').map((e, i) => [String(i + 1), s(e.classCourse), s(e.assignments), s(e.tests), '']),
+    // 19(c) 5th column: each row's own record, or one common record shown in a merged cell over the filled rows.
+    assignments: rows(d, 'assignments').map((e, i) => [String(i + 1), s(e.classCourse), s(e.assignments), s(e.tests),
+      same19c ? (i === 0 ? s(a.p19cRecord) : '') : s(e.record)]),
+    assignments_merged: same19c && rows(d, 'assignments').length > 1,
     activities: rows(d, 'activities').map(e => [s(e.title), s(e.detail)]),
     results: rows(d, 'results').map(e => {
       const v = variation(e.collegePct, e.universityPct);

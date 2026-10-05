@@ -51,7 +51,10 @@ def records():
     marked['activities'] = [{'title': '**Quiz**', 'detail': 'held in the 2^nd^ term'}]
     marked_styled = copy(marked)
     marked_styled['style'] = {'chosen': True, 'color': '1E5631', 'bold': True}
-    return {'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'styled': styled, 'empty': {},
+    merged = copy(FULL)
+    merged['assignments'] = [{'classCourse': f'C{i}', 'assignments': '1', 'tests': '1', 'record': f'own {i}'} for i in range(1, 7)]
+    merged['part2'].update(p19cSame='yes', p19cRecord='Assignment & Test Register')
+    return {'merged_19c': merged, 'full': full, 'long_answers': long, 'extra_rows': extra, 'no_title': no_title, 'styled': styled, 'empty': {},
             'marked': marked, 'marked_styled': marked_styled}
 
 
@@ -81,9 +84,16 @@ def run_props(r):
             f.get(qn('w:ascii')) if f is not None else None, s.get(qn('w:val')) if s is not None else None)
 
 
+def vmerge(tc):
+    tcpr = tc.find(qn('w:tcPr'))
+    v = tcpr.find(qn('w:vMerge')) if tcpr is not None else None
+    return None if v is None else (v.get(qn('w:val')) or 'continue')
+
+
 def dump(path):
     body = Document(path).element.body
-    return [[(run_text(r),) + run_props(r) for r in p.findall(qn('w:r')) if run_text(r)] for p in body.iter(qn('w:p'))]
+    return ([[(run_text(r),) + run_props(r) for r in p.findall(qn('w:r')) if run_text(r)] for p in body.iter(qn('w:p'))]
+            + [[vmerge(tc) for tc in body.iter(qn('w:tc'))]])   # merged cells too
 
 
 class Parity(unittest.TestCase):

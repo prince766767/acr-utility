@@ -80,7 +80,7 @@ class Tables(unittest.TestCase):
         self.assertEqual(t['dob_digits'], '05111980')
         self.assertEqual(t['teaching'], [['1', 'B.Sc. I', 'GCA', '6', '150', '100%'], ['2', 'B.Sc. II', 'GCA', '6', '140', '95%']])
         self.assertEqual(t['total_periods'], '24')
-        self.assertEqual(t['assignments'], [['1', 'B.Sc. I', '4', '2', '']])
+        self.assertEqual(t['assignments'], [['1', 'B.Sc. I', '4', '2', 'Register p. 12']])
         self.assertEqual(t['activities'], [['Chem Quiz', 'Inter-class quiz']])
         self.assertEqual(t['results'], [['B.Sc. III', '1 year', '40', '38', '95', '88.5', '+6.5', '+6.5', '10', '20', '8', '2', '']])
         self.assertEqual(t['orientation'], [['Refresher in Chemistry, UGC', 'HRDC Shimla', '21 days', 'RC-7']])
@@ -92,6 +92,18 @@ class Tables(unittest.TestCase):
         self.assertEqual(t['teaching'], [['1', 'X', '', '', '', '80%']])
         self.assertEqual(t['other_info'], [['1', 'Y']])
         self.assertEqual(t['dob_digits'], '')
+
+    def test_19c_own_or_common_record(self):
+        rows = [{'classCourse': 'B.Sc. I', 'assignments': '4 (2 oral)', 'tests': '2', 'record': 'Reg A'}, {'classCourse': 'B.Sc. II', 'assignments': '3', 'tests': '1', 'record': 'Reg B'}]
+        own = part_tables({'assignments': rows})
+        self.assertEqual(own['assignments'], [['1', 'B.Sc. I', '4 (2 oral)', '2', 'Reg A'], ['2', 'B.Sc. II', '3', '1', 'Reg B']])
+        self.assertFalse(own['assignments_merged'])
+        same = part_tables({'assignments': rows, 'part2': {'p19cSame': 'yes', 'p19cRecord': 'Assignment & Test Register'}})
+        self.assertEqual(same['assignments'], [['1', 'B.Sc. I', '4 (2 oral)', '2', 'Assignment & Test Register'], ['2', 'B.Sc. II', '3', '1', '']])
+        self.assertTrue(same['assignments_merged'])
+        one = part_tables({'assignments': rows[:1], 'part2': {'p19cSame': 'yes', 'p19cRecord': 'Common'}})
+        self.assertEqual(one['assignments'], [['1', 'B.Sc. I', '4 (2 oral)', '2', 'Common']])
+        self.assertFalse(one['assignments_merged'])
 
     def test_teaching_text_and_percent_only_on_plain_number(self):
         t = part_tables({'teaching': [{'allocated': '4L + 2P', 'delivered': '60 (Theory)', 'syllabusPct': 'Completed'}, {'syllabusPct': '90.5'}, {'syllabusPct': '90% (Theory)'}],

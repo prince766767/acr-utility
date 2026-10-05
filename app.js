@@ -51,7 +51,7 @@ function deepAssign(obj,path,value){let p=obj;for(let i=0;i<path.length-1;i++){p
 function collectSimple(){
   const data={session:state.session, profile:{}, part1:{}, part2:{}, api:state.api, ui:state.ui, enclosures:state.enclosures, teaching:state.teaching, assignments:state.assignments, results:state.results, activities:state.activities, orientation:state.orientation, research:state.research, otherInfo:state.otherInfo, style:state.style};
   form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{
-    const n=el.name; const value=el.type==='number' ? (el.value===''?'':Number(el.value)) : el.value;
+    const n=el.name; const value=el.type==='checkbox' ? (el.checked?el.value:'') : el.type==='number' ? (el.value===''?'':Number(el.value)) : el.value;
     if(['collegeName','collegeState','collegeDistrict','collegePin','principalName','collegeAddress','collegeOther','title','relation','fullName','fatherHusband','employeeCode','subject','appointmentDate','designation','payBand','basicPay','promotionDate','academicQualification','professionalQualification','researchDegree','dob','serviceStatus','landline','mobile','email','submissionDate','permanentAddress'].includes(n)) data.profile[n]=value;
     else if(n.startsWith('p')) data.part2[n]=value;
     else if(n==='totalPeriodsPerWeek'||n==='researchYesNo'||n.startsWith('research')) data.part2[n]=value;
@@ -65,11 +65,12 @@ function applySimple(raw){
   const {api:apiData,legacy}=normalizeApi(data.api);
   form.querySelectorAll('input[name],textarea[name],select[name]').forEach(el=>{
     // Every field is set from the record; one it does not have is reset, so nothing carries over from the record shown before.
-    if(Object.prototype.hasOwnProperty.call(merged,el.name)) el.value=merged[el.name] ?? '';
+    if(el.type==='checkbox') el.checked=merged[el.name]===el.value;
+    else if(Object.prototype.hasOwnProperty.call(merged,el.name)) el.value=merged[el.name] ?? '';
     else if(el.tagName==='SELECT') el.selectedIndex=0;
     else el.value='';
   });
-  showPlace();
+  showPlace(); show19cRecord();
   state.style=normalizeStyle(data.style); renderStyleControls();
   state.session=data.session||''; state.profile=data.profile||{}; state.part1=data.part1||{}; state.part2=data.part2||{}; state.api=apiData; state.teaching=data.teaching||[]; state.assignments=data.assignments||[]; state.results=data.results||[]; state.activities=data.activities; state.orientation=data.orientation; state.research=data.research; state.otherInfo=data.otherInfo; state.enclosures=data.enclosures||[]; state.ui=data.ui||{section:'profile'};
   renderRepeatables(); renderEnclosures(); renderApiLists(); showLegacyNotice(legacy); showPartNotice(notices); updateDobWords(); updateScores(); switchSection(state.ui.section||'profile');
@@ -180,6 +181,9 @@ function renderFieldProblems(d){
 document.addEventListener('input',e=>{const el=e.target; if(!el||!el.dataset) return; const clean='score' in el.dataset?cleanScore:'count' in el.dataset?cleanCount:null; if(clean){const v=clean(el.value); if(v!==el.value) el.value=v;}},true);
 form.addEventListener('input',()=>{clearPendingShare();updateScores();updateDobWords();saveLocal();});
 initMarks(document);
+// 19(c): one common record (a merged cell in Word) instead of each row's own; the rows' own records are kept, only hidden.
+function show19cRecord(){const on=form.elements.p19cSame.checked; $('p19cRecordBox').classList.toggle('hidden',!on); $('assignmentRows').classList.toggle('same-record',on);}
+form.elements.p19cSame.addEventListener('change',show19cRecord);
 form.addEventListener('change',()=>{updateScores();saveLocal();});
 $('saveBtn').addEventListener('click',async()=>{try{if(firebaseReady&&currentUser)await saveCloud();else{saveLocal();$('syncStatus').textContent='Draft saved locally.';}}catch(err){console.error(err);$('syncStatus').textContent='Saved locally; cloud sync failed, so no work was lost.';}});
 $('exportBtn').addEventListener('click',()=>{const data=saveLocal();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`ACR_${data.session||'draft'}.acr.json`;a.click();URL.revokeObjectURL(a.href);});

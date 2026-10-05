@@ -91,7 +91,7 @@ export function convertV04(doc) {
   if (s(s1.q24) && !yesNo(s1.q24)) note('24. Satisfied? answer (choose Yes / No again)', s1.q24);
 
   const teaching = arr(s1.q19a).map((r, i) => ({ srNo: i + 1, classCourse: s(r.cls), college: s(r.college), allocated: s(r.allocated), delivered: s(r.delivered), syllabusPct: s(r.syllabus) }));
-  const assignments = arr(s1.q19c).map(r => ({ classCourse: s(r.cls), assignments: n(r.assignments), tests: n(r.tests) }));
+  const assignments = arr(s1.q19c).map(r => ({ classCourse: s(r.cls), assignments: s(r.assignments), tests: s(r.tests), record: s(r.remark) }));
   const activities = arr(s1.q19d).map(r => ({ title: s(r.title), detail: s(r.detail) }));
   const results = arr(s1.q20).map(r => {
     const up = n(r.univPct);
@@ -146,7 +146,6 @@ export function convertV04(doc) {
 
   // ---- what could not come over ----
   note('19(a) note beside the total', s1.q19aNote);
-  for (const r of arr(s1.q19c)) note(`19(c) verifiable record note for ${s(r.cls)}`, r.remark);
   note('26(ii) footnote', ii.note);
   const ov = obj(s2.override);
   for (const [k, label] of [['c1', 'I'], ['c2', 'II'], ['c3', 'III']]) note(`29. Category ${label} "Reported (override)" figure (the new version reports its own totals)`, ov[k]);
