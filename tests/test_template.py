@@ -73,14 +73,74 @@ class TemplateIsBlank(unittest.TestCase):
 
 
 class TemplatePage11(unittest.TestCase):
-    def test_certificate_lines_match_form(self):
-        doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
-        texts = [p.text for p in doc.paragraphs]
-        self.assertIn('Place: {{PLACE}}Signature of the reported on officer', [t.replace('	', '') for t in texts])
-        self.assertFalse(any('{{COLLEGE_PIN}}, {{COLLEGE_NAME}}' in t for t in texts))
-        sig = [t for t in texts if 'Signature (with stamp)' in t]
-        self.assertEqual(len(sig), 1)
-        self.assertEqual(sig[0].replace('	', '').strip(), 'Date:Signature (with stamp) of Principal')
+    """Certificates on page 11 (official form page 12): every signature-side item starts in one column (tools/fix_template_page11_layout.py)."""
+    COL = 7000   # twips from the left margin
+
+    @classmethod
+    def setUpClass(cls):
+        from docx.oxml.ns import qn
+        cls.qn = staticmethod(qn)
+        cls.doc = Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')
+        cls.paras = [p for p in cls.doc.element.body if p.tag == qn('w:p')]
+
+    def text(self, p):
+        qn = self.qn
+        return ''.join((e.text or '') if e.tag == qn('w:t') else '	' if e.tag == qn('w:tab') and e.getparent().tag == qn('w:r') else ''
+                       for e in p.iter())
+
+    def layout(self, p):
+        qn = self.qn
+        ppr = p.find(qn('w:pPr'))
+        ind = ppr.find(qn('w:ind'))
+        tabs = [(t.get(qn('w:val')), int(t.get(qn('w:pos')))) for t in ppr.findall(qn('w:tabs') + '/' + qn('w:tab'))]
+        return (int(ind.get(qn('w:left'), 0)), int(ind.get(qn('w:hanging'), 0)), tabs)
+
+    def find(self, text):
+        hits = [p for p in self.paras if self.text(p) == text]
+        self.assertEqual(len(hits), 1, text)
+        return hits[0]
+
+    def test_teacher_certificate_lines(self):
+        for text in ('Place: {{PLACE}}	Signature of the reported on officer', 'Date: {{REPORT_DATE}}	Designation, {{CERT_DESIGNATION}}'):
+            self.assertEqual(self.layout(self.find(text))[2], [('left', self.COL)], text)
+        self.assertFalse(any('{{COLLEGE_PIN}}, {{COLLEGE_NAME}}' in self.text(p) for p in self.paras))
+
+    def test_principal_certificate_lines(self):
+        dots = self.find('-' * 42)
+        i = self.paras.index(dots)
+        self.assertEqual([self.text(p) for p in self.paras[i:i + 4]],
+                         ['-' * 42, 'Date:	Signature (with stamp) of Principal', 'Place:	{{CERT_COLLEGE}}', 'Name of the Principal: {{PRINCIPAL_NAME}}'])
+        hang = (self.COL, self.COL - 933, [('left', self.COL)])
+        self.assertEqual([self.layout(p) for p in self.paras[i:i + 4]], [(self.COL, 0, []), hang, hang, (self.COL, 0, [])])
+
+    def test_tab_lines_carry_the_signature_column_style(self):
+        # the app's Preview does not use tab stops; it finds these lines by their style (preview_fix.js)
+        qn = self.qn
+        styled = [p for p in self.paras if (lambda s: s is not None and s.get(qn('w:val')) == 'SignatureColumn')(p.find(qn('w:pPr') + '/' + qn('w:pStyle')))]
+        self.assertEqual(len(styled), 8)
+        self.assertTrue(all('	' in self.text(p) and self.layout(p)[2] == [('left', self.COL)] for p in styled))
+        style = self.doc.styles['Signature Column']
+        self.assertEqual((style.style_id, style.base_style.name), ('SignatureColumn', 'Body Text'))
+
+    def test_not_satisfied_box_is_bordered_paragraphs(self):
+        qn = self.qn
+        wps = '{http://schemas.microsoft.com/office/word/2010/wordprocessingShape}txbx'
+        self.assertFalse([b for b in self.doc.element.body.iter(wps) if 'not satisfied' in ''.join(t.text or '' for t in b.iter(qn('w:t')))])
+        first = next(i for i, p in enumerate(self.paras) if self.text(p).startswith('In case the Principal is not satisfied'))
+        last = next(i for i, p in enumerate(self.paras) if self.text(p) == 'Date:	Name of the Principal: {{PRINCIPAL_NAME}}')
+        box = self.paras[first:last + 1]
+        self.assertGreater(len(box), 10)
+        for p in box:
+            bdr = p.find(qn('w:pPr') + '/' + qn('w:pBdr'))
+            self.assertEqual(sorted(c.tag.split('}')[1] for c in bdr), ['bottom', 'left', 'right', 'top'])
+            self.assertIsNone(p.find('.//' + qn('w:drawing')))
+        texts = [self.text(p) for p in box]
+        i = texts.index('	' + '-' * 42)
+        self.assertEqual(texts[i:], ['	' + '-' * 42, '	Signature (with stamp) of Principal', 'Place:	{{CERT_COLLEGE}}', 'Date:	Name of the Principal: {{PRINCIPAL_NAME}}'])
+        self.assertTrue(all(t == '' for t in texts[1:i]))   # room for the Principal's reasons
+        # one box in Word needs the same indents on every paragraph, so the column is a tab stop here
+        self.assertEqual({self.layout(p)[:2] for p in box}, {(0, 0)})
+        self.assertEqual([self.layout(p)[2] for p in box[i:]], [[('left', self.COL)]] * 4)
 
 
 class TemplateTokens(unittest.TestCase):
@@ -111,6 +171,8 @@ class TemplateTokens(unittest.TestCase):
         expected = {t: 1 for t in TOKENS}
         expected['FULL_NAME'] = 2
         expected['SESSION'] = 2
+        expected['PRINCIPAL_NAME'] = 2   # page 11: certificate and the not-satisfied box
+        expected['CERT_COLLEGE'] = 2
         self.assertEqual(found, expected)
 
     def test_title_and_relation_options_unstruck_and_separate(self):

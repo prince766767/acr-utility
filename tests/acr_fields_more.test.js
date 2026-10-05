@@ -22,8 +22,13 @@ test('tokenValues on the full record (same as test_acr_fields.py)', () => {
   assert.strictEqual(v.P17, 'Contribution line 1\nContribution line 2');
 });
 
+test("college under the Principal's signature: the college name, or the form's own words", () => {
+  assert.strictEqual(tokenValues({ profile: { collegeName: ' Govt College Alpha ' } }).CERT_COLLEGE, 'Govt College Alpha');
+  assert.strictEqual(tokenValues({}).CERT_COLLEGE, 'Govt. Degree College.');
+});
+
 test('tokenValues on an empty record and partial joins', () => {
-  assert.ok(Object.values(tokenValues({})).every(x => x === ''));
+  assert.ok(Object.entries(tokenValues({})).every(([k, x]) => x === '' || k === 'CERT_COLLEGE'));
   const v = tokenValues({ profile: { basicPay: '5000', collegePin: '171001', promotionDate: 'P' } });
   assert.deepStrictEqual([v.PAY_INFO, v.COLLEGE_PLACE, v.PLACE, v.PROMOTION], ['Basic Pay 5000', '171001', '171001', 'P']);
 });

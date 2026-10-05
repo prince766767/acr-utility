@@ -64,7 +64,11 @@ class Tokens(unittest.TestCase):
     def test_empty_record(self):
         v = token_values({})
         self.assertEqual(set(v), set(TOKENS))
-        self.assertTrue(all(x == '' for x in v.values()))
+        self.assertTrue(all(x == '' for k, x in v.items() if k != 'CERT_COLLEGE'))
+        self.assertEqual(v['CERT_COLLEGE'], 'Govt. Degree College.')   # the form's own words when no college is given
+
+    def test_cert_college_is_the_college_name(self):
+        self.assertEqual(token_values({'profile': {'collegeName': ' Govt College Alpha '}})['CERT_COLLEGE'], 'Govt College Alpha')
 
     def test_partial_joins(self):
         v = token_values({'profile': {'basicPay': '5000', 'collegePin': '171001', 'promotionDate': 'P'}})

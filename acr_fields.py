@@ -15,7 +15,7 @@ TOKENS = ('SESSION', 'COLLEGE_NAME', 'COLLEGE_PLACE', 'FULL_NAME', 'FATHER_HUSBA
           'RESEARCH_DEGREE', 'DOB_WORDS', 'SERVICE_STATUS', 'COLLEGES_SERVED', 'DEPT_EXAM', 'HINDI_DETAILS',
           'OTHER_ASSIGNMENT', 'ADDR1', 'ADDR2', 'ADDR3', 'LANDLINE', 'MOBILE', 'EMAIL', 'P17', 'P18', 'P19B', 'P19F',
           'P19G', 'P21I', 'RESEARCH_YES_NO', 'P23', 'P24_SATISFIED', 'P24_REASONS', 'P25', 'PLACE', 'REPORT_DATE',
-          'CERT_DESIGNATION', 'PRINCIPAL_NAME')
+          'CERT_DESIGNATION', 'PRINCIPAL_NAME', 'CERT_COLLEGE')
 
 ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve',
         'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
@@ -179,6 +179,7 @@ def token_values(data):
         'REPORT_DATE': _s(p.get('submissionDate')),
         'CERT_DESIGNATION': _s(p.get('designation')),
         'PRINCIPAL_NAME': _s(p.get('principalName')),
+        'CERT_COLLEGE': _s(p.get('collegeName')) or 'Govt. Degree College.',  # under the Principal's signature; the form's own words if none
     }
 
 

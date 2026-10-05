@@ -119,7 +119,7 @@ export const TOKENS = ['SESSION', 'COLLEGE_NAME', 'COLLEGE_PLACE', 'FULL_NAME', 
   'APPOINTMENT_DATE', 'DESIGNATION', 'PAY_INFO', 'PROMOTION', 'ACADEMIC_QUAL', 'PROFESSIONAL_QUAL', 'RESEARCH_DEGREE',
   'DOB_WORDS', 'SERVICE_STATUS', 'COLLEGES_SERVED', 'DEPT_EXAM', 'HINDI_DETAILS', 'OTHER_ASSIGNMENT', 'ADDR1', 'ADDR2',
   'ADDR3', 'LANDLINE', 'MOBILE', 'EMAIL', 'P17', 'P18', 'P19B', 'P19F', 'P19G', 'P21I', 'RESEARCH_YES_NO', 'P23',
-  'P24_SATISFIED', 'P24_REASONS', 'P25', 'PLACE', 'REPORT_DATE', 'CERT_DESIGNATION', 'PRINCIPAL_NAME'];
+  'P24_SATISFIED', 'P24_REASONS', 'P25', 'PLACE', 'REPORT_DATE', 'CERT_DESIGNATION', 'PRINCIPAL_NAME', 'CERT_COLLEGE'];
 
 const s = v => (v === undefined || v === null ? '' : String(v).replace(/\r\n/g, '\n').trim());
 const joinFilled = (parts, sep = ', ') => parts.map(s).filter(Boolean).join(sep);
@@ -198,6 +198,7 @@ export function tokenValues(data) {
     REPORT_DATE: s(p.submissionDate),
     CERT_DESIGNATION: s(p.designation),
     PRINCIPAL_NAME: s(p.principalName),
+    CERT_COLLEGE: s(p.collegeName) || 'Govt. Degree College.',   // under the Principal's signature; the form's own words if none
   };
 }
 
