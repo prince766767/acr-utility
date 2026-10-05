@@ -16,6 +16,7 @@ import { createDraftSync } from './draft_sync.js';
 import { isV04, v04Docs, findV04Docs, convertV04 } from './import_v04.js';
 import { initMarks } from './marks_ui.js';
 import { initPlaceUi } from './place_ui.js';
+import { unfloatWideTables } from './preview_fix.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -327,7 +328,7 @@ async function openPreview(){
     $('previewProblems').classList.remove('hidden'); return;
   }
   status.textContent='Making the preview…';
-  try{const docx=await makeDocx(d); await window.docx.renderAsync(docx,pages,null,{inWrapper:true,breakPages:true,ignoreLastRenderedPageBreak:true,renderHeaders:false,renderFooters:false}); status.textContent='';}
+  try{const docx=await makeDocx(d); await window.docx.renderAsync(docx,pages,null,{inWrapper:true,breakPages:true,ignoreLastRenderedPageBreak:true,renderHeaders:false,renderFooters:false}); unfloatWideTables(pages); status.textContent='';}
   catch(err){console.error(err); status.textContent=`The preview could not be shown: ${errText(err)}`;}
 }
 function closePreview(){$('previewPanel').classList.add('hidden'); $('previewPages').replaceChildren(); document.body.style.overflow='';}
