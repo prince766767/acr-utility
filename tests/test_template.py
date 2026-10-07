@@ -418,6 +418,30 @@ class TemplatePart3SignatureGap(unittest.TestCase):
             self.assertEqual((sp.get(qn('w:before')), sp.get(qn('w:line')), sp.get(qn('w:lineRule'))), ('0', '134', 'exact'), start)
 
 
+class TemplateReportingOfficerBlocks(unittest.TestCase):
+    """After point 41 and in point 46 the Reporting Officer's block is four indented lines, dots after each label, as in
+    the form; point 46 is no longer a two-column section. See tools/fix_template_sign_41_46.py."""
+    def test_blocks(self):
+        from docx.oxml.ns import qn
+        body = list(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body)
+        raw = lambda e: ''.join((x.text or '') if x.tag == qn('w:t') else '	' if x.tag == qn('w:tab') else '' for x in e.iter())
+        starts = [k for k, e in enumerate(body) if raw(e) == 'Signature of Reporting Officer']
+        self.assertEqual(len(starts), 2)
+        for k, left in zip(starts, ('5360', '4900')):
+            lines = [raw(e) for e in body[k:k + 4]]
+            self.assertEqual([x.rstrip('….') for x in lines],
+                             ['Signature of Reporting Officer', 'Name in block letter', 'Designation', 'Date'])
+            for e in body[k:k + 4]:
+                self.assertEqual(e.find(qn('w:pPr') + '/' + qn('w:ind')).get(qn('w:left')), left)
+                self.assertIsNotNone(e.find('.//' + qn('w:b')))
+        nb = body[starts[0] + 4]
+        self.assertTrue(raw(nb).startswith('N. B.:-'))
+        self.assertIsNone(nb.find('.//' + qn('w:i')))
+        sect = next(e for e in body[starts[1]:] if e.find('.//' + qn('w:sectPr')) is not None).find('.//' + qn('w:sectPr'))
+        self.assertIsNone(sect.find(qn('w:cols')).get(qn('w:num')))
+        self.assertEqual(sect.find(qn('w:pgMar')).get(qn('w:left')), '851')
+
+
 class TemplatePage1Fits(unittest.TestCase):
     """Point 16 stays on page 1 in Google Docs too; see tools/fix_template_google_page1.py."""
     def test_gaps_before_13_and_14_are_shrunk(self):
