@@ -164,7 +164,7 @@ test('pdfParts keeps ticked enclosures with files on this device, in file order,
 test('names, labels and messages', () => {
   assert.equal(E.completePdfName('ACR 2025-26 ASHA DEVI.pdf'), 'ACR 2025-26 ASHA DEVI with enclosures.pdf');
   assert.equal(E.labelText(3, 'Conference / seminar certificate'), 'Enclosure 3 \u2014 Conference / seminar certificate');
-  assert.equal(E.labelText(1, 'प्रमाण पत्र é'), 'Enclosure 1 \u2014 ????? ??? é');
+  assert.equal(E.labelText(1, 'प्रमाण पत्र é'), 'Enclosure 1 \u2014 ?????? ???? é');
   assert.equal(E.MESSAGES.damaged('a.pdf'), 'a.pdf could not be read as a PDF.');
   assert.equal(E.MESSAGES.encrypted('a.pdf'), 'a.pdf is password-protected. Open it and print it to a new PDF, then attach that.');
   assert.equal(E.MESSAGES.photo('p.jpg'), 'p.jpg could not be read as a photo.');
