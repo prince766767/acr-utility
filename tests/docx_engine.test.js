@@ -19,8 +19,8 @@ test('builds a Word file with the values and no tokens left', async () => {
 });
 
 test('refuses with the same problems as the PC generator', async () => {
-  await assert.rejects(generateDocx({ profile: { dob: '31/02/1990' }, api: { c1: { classes: 60 } } }, TEMPLATE, deps),
-    err => err instanceof ProblemsError && err.problems.map(p => p.code).join() === 'BAD_DOB,OVER_MAX');
+  await assert.rejects(generateDocx({ profile: { dob: '31/02/1990' }, api: { c1: { classes: '6o' } } }, TEMPLATE, deps),
+    err => err instanceof ProblemsError && err.problems.map(p => p.code).join() === 'BAD_DOB,BAD_SCORE');
 });
 
 test('text style: unknown values fall back to today\'s look', async () => {

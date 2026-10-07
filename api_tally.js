@@ -204,36 +204,34 @@ export function tally(rawApi) {
     if (c !== null) { p44[key] += c; fed[key] = true; }
   }
 
-  const cat1 = (a ?? 0) + (b ?? 0) + (ii ?? 0) + iii + iv;
+  // A teacher may list more activities than a part allows: each part row keeps the typed score,
+  // but only the form's maximum for that part is counted in the totals (and Category II at most 25).
+  const upTo = (c, maxC) => Math.min(c ?? 0, maxC);
+  const raw1 = (a ?? 0) + (b ?? 0) + (ii ?? 0) + iii + iv;
+  const cat1 = upTo(a, 5000) + upTo(b, 1000) + upTo(ii, 2000) + upTo(iii, 2000) + upTo(iv, 2500);
   const raw2 = e1 + e2 + e3;
-  const cat2 = Math.min(raw2, 2500);
-  let cat3 = 0;
-  for (const k of P44_ORDER) cat3 += p44[k];
+  const cat2 = Math.min(upTo(e1, 2000) + upTo(e2, 1500) + upTo(e3, 1500), 2500);
   const e1Total = p44.E1a + p44.E1b;
-
-  const over = (c, maxC, where) => {
-    if (c !== null && c > maxC) add('OVER_MAX', where, `${where} is ${fmt(c)}; the form's maximum is ${fmt(maxC)}.`);
-  };
-  over(a, 5000, '26(i)(a)');
-  over(b, 1000, '26(i)(b)');
-  over(ii, 2000, '26(ii)');
-  over(iii, 2000, '26(iii) total');
-  over(iv, 2500, '26(iv) total');
-  over(cat1, 12500, 'Category I total');
-  over(e1, 2000, '27(i) total');
-  over(e2, 1500, '27(ii) total');
-  over(e3, 1500, '27(iii) total');
-  over(e1Total, 3000, '28 E(i) total');
+  let raw3 = 0;
+  for (const k of P44_ORDER) raw3 += p44[k];
+  const cat3 = raw3 - e1Total + upTo(e1Total, 3000);
 
   const opt = c => (c === null ? '' : fmt(c));
+  const cap = (c, maxC) => (c === null ? '' : fmt(Math.min(c, maxC)));
   const p44v = {};
   for (const k of P44_ORDER) p44v[k] = fed[k] ? fmt(p44[k]) : '';
   p44v.total = fmt(cat3);
+  p44v.raw = fmt(raw3);
+  p44v.capped = raw3 !== cat3;
 
   return {
     values: {
-      p42: { i_a: opt(a), i_b: opt(b), ii: opt(ii), iii: fmt(iii), iv: fmt(iv), total: fmt(cat1) },
-      p43: { i: fmt(e1), ii: fmt(e2), iii: fmt(e3), total: fmt(cat2), raw: fmt(raw2), capped: raw2 > 2500 },
+      // Part scores are the counted ones; `typed` keeps what the entries add up to, for the app's notes.
+      p42: { i_a: cap(a, 5000), i_b: cap(b, 1000), ii: cap(ii, 2000), iii: fmt(upTo(iii, 2000)), iv: fmt(upTo(iv, 2500)),
+        total: fmt(cat1), raw: fmt(raw1), capped: raw1 !== cat1,
+        typed: { i_a: opt(a), i_b: opt(b), ii: opt(ii), iii: fmt(iii), iv: fmt(iv) } },
+      p43: { i: fmt(upTo(e1, 2000)), ii: fmt(upTo(e2, 1500)), iii: fmt(upTo(e3, 1500)),
+        total: fmt(cat2), raw: fmt(raw2), capped: raw2 !== cat2, typed: { i: fmt(e1), ii: fmt(e2), iii: fmt(e3) } },
       p44: p44v,
       p29: { I: fmt(cat1), II: fmt(cat2), I_II: fmt(cat1 + cat2), III: fmt(cat3) },
       p28: { phd: d2a === null && d2b === null ? '' : fmt((d2a ?? 0) + (d2b ?? 0)), e1Total: fmt(e1Total) },

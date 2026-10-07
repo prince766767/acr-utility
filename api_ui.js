@@ -159,12 +159,14 @@ function previewHtml(v, ly) {
 export function renderApiValues({ values, problems }, ly = { cat1: '', cat2: '', total12: '', cat3: '' }) {
   document.querySelectorAll('[data-sum]').forEach(el => {
     const val = pick(values, el.dataset.sum);
-    el.textContent = el.dataset.max ? `${val} / ${el.dataset.max}` : val;
+    const over = el.dataset.max && Number(val) > Number(el.dataset.max);
+    el.textContent = el.dataset.max ? `${val} / ${el.dataset.max}${over ? ` (${el.dataset.max} counted)` : ''}` : val;
   });
   const flagged = new Set(problems.map(p => p.where));
   document.querySelectorAll('[data-where]').forEach(el => el.classList.toggle('over', flagged.has(el.dataset.where)));
-  document.getElementById('cat2CapNote').textContent =
-    values.p43.capped ? `(your parts add up to ${values.p43.raw}; the form allows at most 25)` : '';
+  // More activities than a maximum allows is fine: only the maximum is counted, so say what was counted.
+  for (const [id, v] of [['cat1CapNote', values.p42], ['cat2CapNote', values.p43], ['cat3CapNote', values.p44]])
+    document.getElementById(id).textContent = v.capped ? `(your entries add up to ${v.raw}; ${v.total} counted)` : '';
   const ul = document.getElementById('apiProblems');
   ul.innerHTML = '';
   if (!problems.length) {

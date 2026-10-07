@@ -125,7 +125,7 @@ class Parity(unittest.TestCase):
 
     def test_same_problems(self):
         rec = {'profile': {'dob': '31/02/1990'}, 'results': [{'collegePct': 'x'}],
-               'api': {'c1': {'classes': 60}, 'lastAcademicYear': {'cat1': '1'}}}
+               'api': {'c1': {'classes': '6o'}, 'lastAcademicYear': {'cat1': '1'}}}
         with self.assertRaises(generate_acr.ProblemsError) as ctx:
             generate_acr.generate(copy(rec), self.tmp / 'bad.py.docx')
         r, out = self.js(rec, 'bad')

@@ -124,10 +124,23 @@ class GenerateApi(unittest.TestCase):
         count = lambda d: len(list(d.element.body.iter(blip)))
         self.assertEqual(count(self.doc), count(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx')))
 
+    def test_over_maximum_prints_counted_scores(self):
+        # 27(i) entries add up to 25 (max 20): the entries stay as typed, every total shows what is counted.
+        out = self.tmp / 'over.docx'
+        generate_acr.generate({'api': {'c2': {'extension': [{'activity': 'NSS', 'score': 15}, {'activity': 'NCC', 'score': 10}],
+                                              'management': [{'activity': 'Committee', 'score': 2}]}}}, out)
+        d = Document(out)
+        cells = [c.text.strip() for t in d.tables for row in t.rows for c in row.cells]
+        self.assertIn('15', cells)
+        self.assertIn('10', cells)
+        self.assertNotIn('25', [txt(d, 26, r, 3) for r in range(3, 7)])
+        self.assertEqual([txt(d, 26, r, 3) for r in range(3, 7)], ['20', '2', '0', '22'])
+        self.assertEqual([txt(d, 23, r, 3) for r in (2, 3)], ['22', '22'])
+
     def test_problems_block_generation(self):
         out = self.tmp / 'blocked.docx'
         with self.assertRaises(generate_acr.ApiProblemsError) as ctx:
-            generate_acr.generate({'api': {'c1': {'classes': 60}}}, out)
+            generate_acr.generate({'api': {'c1': {'classes': '6o'}}}, out)
         self.assertEqual(ctx.exception.problems[0]['where'], '26(i)(a)')
         self.assertFalse(out.exists())
 

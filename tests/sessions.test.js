@@ -92,11 +92,11 @@ test('last year lookup: four cases', () => {
   S.saveRecord(st, rec('2024-25', { api: WORKED }));
   assert.deepStrictEqual(S.lastYear(st, '2025-26'), { state: 'record', from: '2024-25', message: 'From the 2024-25 record.',
     values: { cat1: '106.75', cat2: '25', total12: '131.75', cat3: '193' } });
-  S.saveRecord(st, rec('2024-25', { api: { c1: { classes: 60 } } }));
+  S.saveRecord(st, rec('2024-25', { api: { c1: { classes: '6o' } } }));
   const bad = S.lastYear(st, '2025-26');
   assert.strictEqual(bad.state, 'record-problems');
   assert.strictEqual(bad.message, 'The 2024-25 record has problems, so its totals cannot be used. Open 2024-25 to fix them.');
-  assert.strictEqual(bad.problems[0].message, "26(i)(a) is 60; the form's maximum is 50.");
+  assert.strictEqual(bad.problems[0].message, '26(i)(a): score must be a number (0 or more) with at most 2 decimals.');
 });
 
 test('last year file checks', () => {
@@ -106,7 +106,7 @@ test('last year file checks', () => {
   assert.deepStrictEqual(S.checkLastYearFile(rec(''), '2025-26'),
     { ok: false, message: 'This file is for no session; last year for 2025-26 is 2024-25.' });
   assert.deepStrictEqual(S.checkLastYearFile(rec('2024-25'), ''), { ok: false, message: 'Choose the session first.' });
-  const r = S.checkLastYearFile(rec('2024-25', { api: { c1: { classes: 60 } } }), '2025-26');
+  const r = S.checkLastYearFile(rec('2024-25', { api: { c1: { classes: '6o' } } }), '2025-26');
   assert.strictEqual(r.ok, false);
   assert.strictEqual(r.message, 'The 2024-25 file has problems, so its totals cannot be used.');
   assert.strictEqual(r.problems.length, 1);

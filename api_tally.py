@@ -163,36 +163,38 @@ def tally(api):
             p44[key] += c
             fed[key] = True
 
-    cat1 = (a or 0) + (b or 0) + (ii or 0) + iii + iv
+    # A teacher may list more activities than a part allows: each part row keeps the typed score,
+    # but only the form's maximum for that part is counted in the totals (and Category II at most 25).
+    def up_to(c, max_c):
+        return min(c or 0, max_c)
+
+    raw1 = (a or 0) + (b or 0) + (ii or 0) + iii + iv
+    cat1 = up_to(a, 5000) + up_to(b, 1000) + up_to(ii, 2000) + up_to(iii, 2000) + up_to(iv, 2500)
     raw2 = e1 + e2 + e3
-    cat2 = min(raw2, 2500)
-    cat3 = sum(p44[k] for k in P44_ORDER)
+    cat2 = min(up_to(e1, 2000) + up_to(e2, 1500) + up_to(e3, 1500), 2500)
     e1_total = p44['E1a'] + p44['E1b']
-
-    def over(c, max_c, where):
-        if c is not None and c > max_c:
-            add('OVER_MAX', where, f"{where} is {fmt(c)}; the form's maximum is {fmt(max_c)}.")
-
-    over(a, 5000, '26(i)(a)')
-    over(b, 1000, '26(i)(b)')
-    over(ii, 2000, '26(ii)')
-    over(iii, 2000, '26(iii) total')
-    over(iv, 2500, '26(iv) total')
-    over(cat1, 12500, 'Category I total')
-    over(e1, 2000, '27(i) total')
-    over(e2, 1500, '27(ii) total')
-    over(e3, 1500, '27(iii) total')
-    over(e1_total, 3000, '28 E(i) total')
+    raw3 = sum(p44[k] for k in P44_ORDER)
+    cat3 = raw3 - e1_total + up_to(e1_total, 3000)
 
     def opt(c):
         return '' if c is None else fmt(c)
 
+    def cap(c, max_c):
+        return '' if c is None else fmt(min(c, max_c))
+
     p44v = {k: (fmt(p44[k]) if fed[k] else '') for k in P44_ORDER}
     p44v['total'] = fmt(cat3)
+    p44v['raw'] = fmt(raw3)
+    p44v['capped'] = raw3 != cat3
     return {
         'values': {
-            'p42': {'i_a': opt(a), 'i_b': opt(b), 'ii': opt(ii), 'iii': fmt(iii), 'iv': fmt(iv), 'total': fmt(cat1)},
-            'p43': {'i': fmt(e1), 'ii': fmt(e2), 'iii': fmt(e3), 'total': fmt(cat2), 'raw': fmt(raw2), 'capped': raw2 > 2500},
+            # Part scores are the counted ones; 'typed' keeps what the entries add up to, for the app's notes.
+            'p42': {'i_a': cap(a, 5000), 'i_b': cap(b, 1000), 'ii': cap(ii, 2000), 'iii': fmt(up_to(iii, 2000)),
+                    'iv': fmt(up_to(iv, 2500)), 'total': fmt(cat1), 'raw': fmt(raw1), 'capped': raw1 != cat1,
+                    'typed': {'i_a': opt(a), 'i_b': opt(b), 'ii': opt(ii), 'iii': fmt(iii), 'iv': fmt(iv)}},
+            'p43': {'i': fmt(up_to(e1, 2000)), 'ii': fmt(up_to(e2, 1500)), 'iii': fmt(up_to(e3, 1500)),
+                    'total': fmt(cat2), 'raw': fmt(raw2), 'capped': raw2 != cat2,
+                    'typed': {'i': fmt(e1), 'ii': fmt(e2), 'iii': fmt(e3)}},
             'p44': p44v,
             'p29': {'I': fmt(cat1), 'II': fmt(cat2), 'I_II': fmt(cat1 + cat2), 'III': fmt(cat3)},
             'p28': {'phd': '' if d2a is None and d2b is None else fmt((d2a or 0) + (d2b or 0)), 'e1Total': fmt(e1_total)},
