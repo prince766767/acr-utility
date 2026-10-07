@@ -17,6 +17,10 @@ import { isV04, v04Docs, findV04Docs, convertV04 } from './import_v04.js';
 import { initMarks } from './marks_ui.js';
 import { initPlaceUi } from './place_ui.js';
 import { unfloatWideTables, joinBorderedParagraphs, alignSignatureColumn } from './preview_fix.js';
+import { pdfParts, missingText, completePdfName, buildCompletePdf, checkPdf, MESSAGES, MAX_PDF_BYTES, PDF_TOOL_MESSAGE } from './enclosure_pdf.js';
+import { createFileStore, newFileId, isQuotaError, FULL_MESSAGE, NO_STORE_MESSAGE } from './enclosure_files.js';
+import { shrinkImage } from './image_shrink.js';
+import { fileBlock, sizeSummary, addFiles, removeFile, moveFile } from './enclosure_ui.js';
 
 // Browser storage, wrapped so that a storage error never loses what is on screen.
 function safeStore(){
@@ -43,6 +47,23 @@ const DOCX_MIME='application/vnd.openxmlformats-officedocument.wordprocessingml.
 const googleReady=Boolean(googleConfig?.clientId)&&!googleConfig.clientId.startsWith('YOUR_');
 const googleTokens=googleReady?createTokenSource({clientId:googleConfig.clientId,gis:loadGis}):null;
 const drive=googleReady?createDrive({fetch:(...a)=>fetch(...a),getToken:o=>googleTokens.getToken(o)}):null;
+// Enclosure files (spec docs/superpowers/specs/2026-10-07-enclosure-files-design.md).
+const fileStore=createFileStore();
+let canStoreFiles=false, haveIds=new Set(), pdfLibLoading=null;
+function loadPdfLib(){
+  if(window.PDFLib) return Promise.resolve(window.PDFLib);
+  return pdfLibLoading??=new Promise((resolve,reject)=>{
+    const s=document.createElement('script'); s.src='vendor/pdf-lib.min.js';
+    s.onload=()=>window.PDFLib?resolve(window.PDFLib):reject(new Error(PDF_TOOL_MESSAGE));
+    s.onerror=()=>{pdfLibLoading=null; reject(new Error(PDF_TOOL_MESSAGE));};
+    document.head.appendChild(s);
+  });
+}
+async function refreshFiles(){
+  canStoreFiles=await fileStore.available();
+  haveIds=new Set(canStoreFiles?await fileStore.ids(state.session):[]);
+  renderEnclosures(); renderReview();
+}
 let docxBlocked=false, docxBusy=false, pendingShare=null;
 
 const enclosureDefaults=ENCLOSURE_DEFAULTS;
@@ -78,7 +99,7 @@ function applySimple(raw){
 function saveLocal(){const data=collectSimple(); data.savedAt=new Date().toISOString(); sessions.writeRecord(store,data); $('lastSaved').value=new Date(data.savedAt).toLocaleString(); updateProgress(); scheduleDraftSync(); return data;}
 function loadLocal(){const notices=sessions.migrate(store); const rec=sessions.loadCurrent(store); if(rec){applySimple(rec); if(rec.savedAt) $('lastSaved').value=new Date(rec.savedAt).toLocaleString();} resolveLastYear(); refreshSessionList(); if(notices.length) $('syncStatus').textContent=notices.join(' ');}
 function refreshSessionList(){const dl=$('sessionList'); dl.innerHTML=''; for(const s of sessions.listSessions(store)){const o=document.createElement('option'); o.value=s; dl.appendChild(o);}}
-function openSession(session){clearPendingShare(); const rec=sessions.readRecord(store,session)||sessions.newRecordFrom({},session); applySimple(rec); store.setItem(sessions.CURRENT_KEY,session); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList(); renderReview();}
+function openSession(session){clearPendingShare(); const rec=sessions.readRecord(store,session)||sessions.newRecordFrom({},session); applySimple(rec); store.setItem(sessions.CURRENT_KEY,session); resolveLastYear(); updateScores(); saveLocal(); refreshSessionList(); renderReview(); refreshFiles();}
 function resolveLastYear(){
   const info=sessions.lastYear(store,state.session);
   const ly=state.api.lastAcademicYear&&typeof state.api.lastAcademicYear==='object'?state.api.lastAcademicYear:{};
@@ -143,8 +164,56 @@ document.querySelectorAll('[data-add]').forEach(btn=>btn.addEventListener('click
 
 function renderEnclosures(){
   const list=$('enclosureList'); list.innerHTML='';
-  enclosureDefaults.forEach((label,i)=>{const wrap=document.createElement('label');wrap.className='checkitem';const cb=document.createElement('input');cb.type='checkbox';cb.checked=state.enclosures.some(x=>x.label===label&&x.checked);cb.addEventListener('change',()=>{const found=state.enclosures.find(x=>x.label===label);if(found)found.checked=cb.checked;else state.enclosures.push({label,checked:cb.checked});saveLocal();updateProgress();});wrap.append(cb,document.createTextNode(label));list.appendChild(wrap);});
-  $('customEnclosures').innerHTML=''; state.enclosures.filter(x=>x.custom).forEach((x,idx)=>{const d=document.createElement('div');d.className='custom-item';d.innerHTML=`<span>☑ ${escapeHtml(x.label)}</span>`;const b=document.createElement('button');b.type='button';b.className='danger';b.textContent='Remove';b.onclick=()=>{state.enclosures=state.enclosures.filter(y=>y!==x);renderEnclosures();saveLocal();updateProgress();};d.appendChild(b);$('customEnclosures').appendChild(d);});
+  const block=entry=>fileBlock(document,{entry,have:haveIds,canStore:canStoreFiles,
+    onAttach:files=>attachFiles(entry,files),
+    onMove:(id,dir)=>{entry.files=moveFile(entry,id,dir); renderEnclosures(); saveLocal();},
+    onRemove:id=>removeAttached(entry,id)});
+  enclosureDefaults.forEach(label=>{
+    const wrap=document.createElement('label');wrap.className='checkitem';
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=state.enclosures.some(x=>x.label===label&&x.checked);
+    cb.addEventListener('change',()=>{const found=state.enclosures.find(x=>x.label===label);if(found)found.checked=cb.checked;else state.enclosures.push({label,checked:cb.checked});saveLocal();updateProgress();renderEnclosures();});
+    wrap.append(cb,document.createTextNode(label));list.appendChild(wrap);
+    const entry=state.enclosures.find(x=>x.label===label&&x.checked&&!x.custom);
+    if(entry) list.appendChild(block(entry));
+  });
+  $('customEnclosures').innerHTML=''; state.enclosures.filter(x=>x.custom).forEach(x=>{
+    const d=document.createElement('div');d.className='custom-item';d.innerHTML=`<span>☑ ${escapeHtml(x.label)}</span>`;
+    const b=document.createElement('button');b.type='button';b.className='danger';b.textContent='Remove';
+    b.onclick=async()=>{for(const f of x.files||[]) await fileStore.remove(state.session,f.id).catch(console.error); state.enclosures=state.enclosures.filter(y=>y!==x);renderEnclosures();saveLocal();updateProgress();};
+    d.appendChild(b);$('customEnclosures').appendChild(d);
+    if(x.checked!==false) $('customEnclosures').appendChild(block(x));
+  });
+  const sz=sizeSummary(state.enclosures);
+  $('enclosureSize').textContent=canStoreFiles?sz.text:NO_STORE_MESSAGE;
+  if(sz.warn&&canStoreFiles){const w=document.createElement('span');w.className='encl-warn';w.textContent=' '+sz.warn;$('enclosureSize').appendChild(w);}
+}
+async function attachFiles(entry,list){
+  const status=$('enclosureStatus'), msgs=[], metas=[]; status.textContent='Adding…';
+  for(const file of list){
+    let type, bytes;
+    if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
+      if(file.size>MAX_PDF_BYTES){msgs.push(MESSAGES.tooBig(file.name));continue;}
+      bytes=new Uint8Array(await file.arrayBuffer());
+      let verdict; try{verdict=await checkPdf(bytes,await loadPdfLib());}catch(err){msgs.push(err.message);break;}
+      if(verdict!=='ok'){msgs.push(MESSAGES[verdict](file.name));continue;}
+      type='application/pdf';
+    }else{
+      const blob=await shrinkImage(file);
+      if(!blob){msgs.push(MESSAGES.photo(file.name));continue;}
+      bytes=new Uint8Array(await blob.arrayBuffer()); type='image/jpeg';
+    }
+    const id=newFileId(), name=type==='image/jpeg'?file.name.replace(/\.(png|jpe?g)$/i,'')+'.jpg':file.name;
+    try{await fileStore.put({session:state.session,id,name,type,size:bytes.length,bytes,addedAt:new Date().toISOString()});}
+    catch(err){console.error(err); msgs.push(isQuotaError(err)?FULL_MESSAGE:`${file.name} could not be saved: ${err?.message||err}`); break;}
+    metas.push({id,name,type,size:bytes.length}); haveIds.add(id);
+  }
+  if(metas.length) entry.files=addFiles(entry,metas);
+  renderEnclosures(); saveLocal(); renderReview();
+  status.textContent=msgs.join(' ');
+}
+async function removeAttached(entry,id){
+  try{await fileStore.remove(state.session,id);}catch(err){console.error(err);}
+  haveIds.delete(id); entry.files=removeFile(entry,id); renderEnclosures(); saveLocal(); renderReview();
 }
 $('addEnclosureBtn').addEventListener('click',()=>{const v=$('customEnclosure').value.trim();if(!v)return;state.enclosures.push({label:v,checked:true,custom:true});$('customEnclosure').value='';renderEnclosures();saveLocal();updateProgress();});
 
@@ -231,7 +300,7 @@ async function openFromDrive(target){
   openSession(target);
   return true;
 }
-function syncDocxButtons(){for(const id of ['downloadDocxBtn','shareBtn','driveBtn','shareNowBtn'])$(id).disabled=docxBlocked||docxBusy;}
+function syncDocxButtons(){for(const id of ['downloadDocxBtn','shareBtn','driveBtn','shareNowBtn','completePdfBtn'])$(id).disabled=docxBlocked||docxBusy;}
 async function makeDocx(d){
   const resp=await fetch('ACR_EMPLOYEE_MASTER.docx');
   if(!resp.ok) throw new Error('The Word template could not be loaded.');
@@ -260,6 +329,25 @@ function shareResultText(result,files,{retry=true}={}){
   return files.length>1?"This browser can't attach files to a share; both files were downloaded. Attach them to an email yourself.":"This browser can't attach files to a share; the file was downloaded. Attach it to an email yourself.";
 }
 async function pdfFor(d,docx){return new File([await drive.docxToPdf(docx)],acrFileName(d,'pdf'),{type:'application/pdf'});}
+const enclosureParts=()=>pdfParts(state.enclosures,id=>haveIds.has(id));
+// The ACR PDF followed by the enclosure files on this device; missing = files listed but not here.
+async function completeFor(pdf){
+  const {parts,missing}=enclosureParts();
+  const PDFLib=await loadPdfLib();
+  const filled=[];
+  for(const p of parts){
+    const files=[];
+    for(const f of p.files){const rec=await fileStore.get(state.session,f.id); if(rec) files.push({name:f.name,type:f.type,bytes:rec.bytes});}
+    if(files.length) filled.push({...p,files});
+  }
+  const bytes=await buildCompletePdf({acrPdf:new Uint8Array(await pdf.arrayBuffer()),parts:filled,PDFLib});
+  return {file:new File([bytes],completePdfName(pdf.name),{type:'application/pdf'}),missing:missingText(missing)};
+}
+function renderCompleteControls(){
+  const {parts,missing}=enclosureParts();
+  $('completePdfBtn').classList.toggle('hidden',!googleReady||!parts.length);
+  $('enclosureMissing').textContent=missingText(missing);
+}
 
 $('downloadDocxBtn').addEventListener('click',()=>runDocxJob(async say=>{
   const d=saveLocal(); say('Making the Word file…');
@@ -276,8 +364,10 @@ $('shareBtn').addEventListener('click',()=>runDocxJob(async say=>{
   let pdf=null;
   if(!signInError){try{say('Making the PDF…'); pdf=await pdfFor(d,docx);}catch(err){signInError=err;}}
   if(!pdf){console.error(signInError); offerShareTap([docx],'Share the Word file only'); return `The PDF could not be made: ${errText(signInError)} You can share the Word file only.`;}
-  const files=[docx,pdf];
-  return shareResultText(await shareFiles(files,{title:docx.name.replace(/\.docx$/,'')}),files);
+  let files=[docx,pdf], note='';
+  if(enclosureParts().parts.length){say('Adding the enclosures…'); const c=await completeFor(pdf); files=[docx,c.file]; note=c.missing;}
+  const text=shareResultText(await shareFiles(files,{title:docx.name.replace(/\.docx$/,'')}),files);
+  return note?`${text} ${note}`:text;
 }));
 
 $('shareNowBtn').addEventListener('click',()=>{const files=pendingShare; if(!files) return; runDocxJob(async()=>shareResultText(await shareFiles(files,{title:files[0].name.replace(/\.docx$/,'')}),files,{retry:false}));});
@@ -290,9 +380,26 @@ $('driveBtn').addEventListener('click',()=>runDocxJob(async say=>{
   say('Uploading…'); const folderId=await drive.ensureFolder();
   await drive.upsertFile({name:docx.name,bytes:docx,mime:DOCX_MIME,folderId});
   await drive.upsertFile({name:pdf.name,bytes:pdf,mime:'application/pdf',folderId});
-  const p=document.createElement('span'); p.append(`Saved ${docx.name} and ${pdf.name} to Google Drive. `);
+  let saved=`Saved ${docx.name} and ${pdf.name}`, note='';
+  if(enclosureParts().parts.length){
+    say('Adding the enclosures…'); const c=await completeFor(pdf);
+    await drive.upsertFile({name:c.file.name,bytes:c.file,mime:'application/pdf',folderId});
+    saved=`Saved ${docx.name}, ${pdf.name} and ${c.file.name}`; note=c.missing?` ${c.missing}`:'';
+  }
+  const p=document.createElement('span'); p.append(`${saved} to Google Drive.${note} `);
   const a=document.createElement('a'); a.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`; a.target='_blank'; a.rel='noopener'; a.textContent=`Open the "${FOLDER_NAME}" folder`;
   p.append(a); return p;
+}));
+
+$('completePdfBtn').addEventListener('click',()=>runDocxJob(async say=>{
+  const d=saveLocal();
+  say('Signing in to Google…');
+  try{await googleTokens.getToken();}catch(err){return `The complete PDF needs the ACR PDF from Google: ${errText(err)}`;}
+  say('Making the Word file…'); const docx=await makeDocx(d);
+  let pdf; try{say('Making the PDF…'); pdf=await pdfFor(d,docx);}catch(err){return `The complete PDF needs the ACR PDF from Google: ${errText(err)}`;}
+  say('Adding the enclosures…'); const c=await completeFor(pdf);
+  downloadFile(c.file);
+  return c.missing?`Complete PDF ready: ${c.file.name}. ${c.missing}`:`Complete PDF ready: ${c.file.name}`;
 }));
 
 // Text style for filled-in answers (applied by both generators to every blue answer run).
@@ -395,7 +502,7 @@ function askWhichCopy(kind,{session,local,remote}){
     $('syncUseDrive').onclick=()=>done('drive'); $('syncUseDevice').onclick=()=>done('device');
   });
 }
-const draftSync=googleReady?createDraftSync({store,sessions,drive,ask:askWhichCopy,deviceLabel:deviceLabel()}):null;
+const draftSync=googleReady?createDraftSync({store,sessions,drive,files:fileStore,ask:askWhichCopy,deviceLabel:deviceLabel()}):null;
 function setDriveState(kind,detail=''){
   const b=$('draftDriveBtn'); b.classList.toggle('amber',kind==='reconnect'||kind==='error');
   const t=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
@@ -411,6 +518,8 @@ async function runDraftSync(all){
   try{
     const results=all?await draftSync.syncAll():[await draftSync.syncSession(state.session)];
     refreshSessionList();
+    if(results.some(r=>r.filesFailed)) $('draftMenuStatus').textContent='Some enclosure files could not be synced; they will be tried again.';
+    await refreshFiles();
     if(results.some(r=>r.loaded&&(r.session||'')===(state.session||''))) openSession(state.session);
     setDriveState('saved');
   }catch(err){console.error(err); setDriveState(err&&err.status===401?'reconnect':'error',errText(err));}
@@ -433,9 +542,10 @@ window.addEventListener('online',()=>{if(driveOn())runDraftSync(false);});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&driveOn()&&googleTokens&&googleTokens.current()){clearTimeout(syncTimer); runDraftSync(false);}});
 
 if(googleReady){for(const id of ['shareBtn','driveBtn','googleRouteHelp','draftDriveBtn'])$(id).classList.remove('hidden'); googleTokens.preload(); setDriveState(driveOn()?'reconnect':'off');}
+refreshFiles();
 
 function updateProgress(){const d=collectSimple();let done=0,total=0;const must=[['fullName','Profile'],['employeeCode','Profile'],['subject','Profile'],['designation','Profile'],['p17','17'],['p18','18'],['p19b','19b'],['p21i','21i'],['p25','25']];must.forEach(([k])=>{total++; const v=d.profile[k]??d.part2[k]; if(String(v||'').trim())done++;}); total+=4; if(d.teaching.length)done++; if(d.assignments.length)done++; if(d.results.length)done++; if(d.enclosures.some(x=>x.checked))done++; const pct=Math.round(done/total*100);$('progressBar').style.width=`${pct}%`;$('progressText').textContent=`${pct}%`;}
-function renderReview(){const d=collectSimple();renderFieldProblems(d);const items=[['Session',d.session||'Not set'],['Employee',d.profile.fullName||'Not set'],['Employee Code',d.profile.employeeCode||'Not set'],['Teaching rows',d.teaching.length],['Exam result rows',d.results.length],['Selected enclosures',d.enclosures.filter(x=>x.checked).length],...apiReviewItems(d.api)];const box=$('reviewList');box.innerHTML='';items.forEach(([a,b])=>{const x=document.createElement('div');x.className='review-item';x.innerHTML=`<span>${escapeHtml(String(a))}</span><strong>${escapeHtml(String(b))}</strong>`;box.appendChild(x);});}
+function renderReview(){renderCompleteControls();const d=collectSimple();renderFieldProblems(d);const items=[['Session',d.session||'Not set'],['Employee',d.profile.fullName||'Not set'],['Employee Code',d.profile.employeeCode||'Not set'],['Teaching rows',d.teaching.length],['Exam result rows',d.results.length],['Selected enclosures',d.enclosures.filter(x=>x.checked).length],...apiReviewItems(d.api)];const box=$('reviewList');box.innerHTML='';items.forEach(([a,b])=>{const x=document.createElement('div');x.className='review-item';x.innerHTML=`<span>${escapeHtml(String(a))}</span><strong>${escapeHtml(String(b))}</strong>`;box.appendChild(x);});}
 function escapeHtml(s){return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');}
 
 if(firebaseReady){$('signInBtn').addEventListener('click',async()=>{const provider=new GoogleAuthProvider();await signInWithPopup(auth,provider);});$('signOutBtn').addEventListener('click',()=>signOut(auth));onAuthStateChanged(auth,async user=>{currentUser=user;if(user){$('userLine').textContent=user.email||'Signed in';if(SHOW_FIREBASE_SIGNIN){$('signInBtn').classList.add('hidden');$('signOutBtn').classList.remove('hidden');}try{await loadCloud();}catch(err){console.warn(err);$('syncStatus').textContent='Signed in; local draft is available even if cloud sync is unavailable.';}}else{$('userLine').textContent='Local draft mode';if(SHOW_FIREBASE_SIGNIN){$('signInBtn').classList.remove('hidden');$('signOutBtn').classList.add('hidden');}}});}else{$('signInBtn').disabled=true;$('signInBtn').title='Configure firebase-config.js first';}

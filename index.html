@@ -290,7 +290,9 @@
         </div>
         <div class="card">
           <h2>List of Enclosures</h2>
-          <p class="muted">Selected enclosures will later populate the official ACR list with automatic numbering and checked boxes.</p>
+          <p class="muted">Ticked enclosures are listed in the ACR with numbers. You may also attach each one's document (PDF or photo); the app then makes a complete PDF: the ACR followed by the enclosures. Attaching is optional.</p>
+          <p id="enclosureSize" class="muted"></p>
+          <p id="enclosureStatus" class="muted" role="status"></p>
           <div id="enclosureList" class="checklist"></div>
           <div class="section-heading">
             <label class="inline-label">Custom enclosure<input id="customEnclosure" placeholder="e.g. Certificate of invited lecture"></label>
@@ -311,9 +313,11 @@
               <button type="button" id="downloadDocxBtn">Download Word file (.docx)</button>
               <button type="button" id="shareBtn" class="hidden">Share / Email (DOCX + PDF)</button>
               <button type="button" id="driveBtn" class="hidden">Save to Google Drive</button>
+              <button type="button" id="completePdfBtn" class="hidden">Download complete PDF (ACR + enclosures)</button>
             </div>
             <span id="docxReason" class="muted"></span>
             <p id="docxStatus" class="muted" role="status"></p>
+            <p id="enclosureMissing" class="muted"></p>
             <button type="button" id="shareNowBtn" class="secondary hidden">Open share menu</button>
             <details>
               <summary>Make a PDF or print on a phone</summary>
