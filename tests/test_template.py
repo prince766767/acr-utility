@@ -420,7 +420,8 @@ class TemplatePart3SignatureGap(unittest.TestCase):
 
 class TemplateReportingOfficerBlocks(unittest.TestCase):
     """After point 41 and in point 46 the Reporting Officer's block is four indented lines, dots after each label, as in
-    the form; point 46 is no longer a two-column section. See tools/fix_template_sign_41_46.py."""
+    the form; point 46 is no longer a two-column section and sits under its grading line. See
+    tools/fix_template_sign_41_46.py and tools/fix_template_sign_46_same_page.py."""
     def test_blocks(self):
         from docx.oxml.ns import qn
         body = list(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body)
@@ -440,6 +441,9 @@ class TemplateReportingOfficerBlocks(unittest.TestCase):
         sect = next(e for e in body[starts[1]:] if e.find('.//' + qn('w:sectPr')) is not None).find('.//' + qn('w:sectPr'))
         self.assertIsNone(sect.find(qn('w:cols')).get(qn('w:num')))
         self.assertEqual(sect.find(qn('w:pgMar')).get(qn('w:left')), '851')
+        # Same section (so same page, also in the app's Preview) as the grading line just above it.
+        self.assertIsNone(sect.find(qn('w:type')))
+        self.assertTrue(raw(body[starts[1] - 1]).endswith('Excellent)'))
 
 
 class TemplatePage1Fits(unittest.TestCase):
