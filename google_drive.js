@@ -141,5 +141,13 @@ export function createDrive({ fetch, getToken }) {
     return (await call(`${API}/${fileId}?alt=media`)).text();
   }
 
-  return { ensureFolder, upsertFile, docxToPdf, listFiles, downloadText };
+  async function downloadBytes(fileId) {
+    return new Uint8Array(await (await call(`${API}/${fileId}?alt=media`)).arrayBuffer());
+  }
+
+  async function deleteFile(fileId) {
+    await call(`${API}/${fileId}`, { method: 'DELETE' });
+  }
+
+  return { ensureFolder, upsertFile, docxToPdf, listFiles, downloadText, downloadBytes, deleteFile };
 }

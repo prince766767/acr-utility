@@ -217,3 +217,17 @@ test('current() gives the token only while it is valid, and never asks Google', 
   assert.equal(src.current(), null);
   assert.equal(oauth.requests.length, 1);
 });
+
+test('downloadBytes returns the file bytes', async () => {
+  const fetch = fakeFetch([new Response(new Uint8Array([1, 2, 250]))]);
+  const out = await createDrive({ fetch, getToken: tokens('T1') }).downloadBytes('ID9');
+  assert.deepEqual([...out], [1, 2, 250]);
+  assert.equal(fetch.calls[0].url, `${API}/ID9?alt=media`);
+});
+
+test('deleteFile sends DELETE for the file', async () => {
+  const fetch = fakeFetch([new Response(null, { status: 204 })]);
+  await createDrive({ fetch, getToken: tokens('T1') }).deleteFile('ID7');
+  assert.equal(fetch.calls[0].method, 'DELETE');
+  assert.equal(fetch.calls[0].url, `${API}/ID7`);
+});
