@@ -49,3 +49,62 @@ export const winAnsiSafe = s => [...String(s)].map(c => {
 }).join('');
 
 export const labelText = (number, label) => winAnsiSafe(`Enclosure ${number} \u2014 ${label}`);
+
+// 'ok', 'encrypted' (password-protected) or 'damaged' (cannot be opened).
+export async function checkPdf(bytes, PDFLib) {
+  try {
+    await PDFLib.PDFDocument.load(bytes);
+    return 'ok';
+  } catch {
+    // pdf-lib's built bundle loses its error classes, so ask again ignoring encryption: it opens only if merely locked.
+    try { return (await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true })).isEncrypted ? 'encrypted' : 'damaged'; }
+    catch { return 'damaged'; }
+  }
+}
+
+const A4 = [595.28, 841.89];
+const MARGIN = 28;
+
+// A photo on an A4 page (landscape when wider than tall), fitted inside the margins, centred, never stretched.
+export function photoPlacement(imgW, imgH) {
+  const [w, h] = imgW > imgH ? [A4[1], A4[0]] : A4;
+  const s = Math.min((w - 2 * MARGIN) / imgW, (h - 2 * MARGIN) / imgH);
+  const width = imgW * s, height = imgH * s;
+  return { page: [w, h], x: (w - width) / 2, y: (h - height) / 2, width, height };
+}
+
+// "Enclosure n — label" at the top left of the page, on a white box so it stays readable on a scan.
+function stamp(page, text, font, rgb) {
+  const size = 9, pad = 2;
+  const box = page.getMediaBox();
+  const x = box.x + MARGIN;
+  const y = box.y + box.height - 12 - size;   // the text's top is 12 pt below the top edge
+  const w = font.widthOfTextAtSize(text, size);
+  page.drawRectangle({ x: x - pad, y: y - pad - 2, width: w + 2 * pad, height: size + 2 * pad + 2, color: rgb(1, 1, 1) });
+  page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
+}
+
+export async function buildCompletePdf({ acrPdf, parts, PDFLib }) {
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
+  const out = await PDFDocument.create();
+  const acr = await PDFDocument.load(acrPdf);
+  for (const p of await out.copyPages(acr, acr.getPageIndices())) out.addPage(p);
+  const font = await out.embedFont(StandardFonts.Helvetica);
+  for (const part of parts) {
+    let first = null;
+    for (const f of part.files) {
+      if (f.type === 'application/pdf') {
+        const src = await PDFDocument.load(f.bytes);
+        for (const p of await out.copyPages(src, src.getPageIndices())) { out.addPage(p); first ??= p; }
+      } else {
+        const img = await out.embedJpg(f.bytes);
+        const at = photoPlacement(img.width, img.height);
+        const page = out.addPage(at.page);
+        page.drawImage(img, { x: at.x, y: at.y, width: at.width, height: at.height });
+        first ??= page;
+      }
+    }
+    if (first) stamp(first, labelText(part.number, part.label), font, rgb);
+  }
+  return out.save();
+}

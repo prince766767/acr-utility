@@ -371,9 +371,10 @@ export async function checkPdf(bytes, PDFLib) {
   try {
     await PDFLib.PDFDocument.load(bytes);
     return 'ok';
-  } catch (err) {
-    const encrypted = (PDFLib.EncryptedPDFError && err instanceof PDFLib.EncryptedPDFError) || err?.constructor?.name === 'EncryptedPDFError';
-    return encrypted ? 'encrypted' : 'damaged';
+  } catch {
+    // pdf-lib's built bundle loses its error classes, so ask again ignoring encryption: it opens only if merely locked.
+    try { return (await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true })).isEncrypted ? 'encrypted' : 'damaged'; }
+    catch { return 'damaged'; }
   }
 }
 

@@ -5,6 +5,8 @@ import JSZip from 'jszip';
 import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import { generateDocx } from '../docx_engine.js';
 import * as E from '../enclosure_pdf.js';
+import * as PDFLib from 'pdf-lib';
+import { inflateSync } from 'node:zlib';
 
 const read = n => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8'));
 const TEMPLATE = readFileSync(new URL('../ACR_EMPLOYEE_MASTER.docx', import.meta.url));
@@ -47,4 +49,65 @@ test('names, labels and messages', () => {
   assert.equal(E.MESSAGES.photo('p.jpg'), 'p.jpg could not be read as a photo.');
   assert.equal(E.MESSAGES.tooBig('big.pdf'), 'big.pdf is larger than 10 MB. Attach a smaller copy.');
   assert.equal(E.MAX_PDF_BYTES, 10 * 1024 * 1024);
+});
+
+const fx = n => new Uint8Array(readFileSync(new URL(`./fixtures/encl/${n}`, import.meta.url)));
+async function acrPdf(pages) {
+  const d = await PDFLib.PDFDocument.create();
+  for (let i = 0; i < pages; i++) d.addPage([595.28, 841.89]);
+  return d.save();
+}
+// All content-stream bytes of a page as a latin1 string (inflated when compressed).
+function pageContent(doc, i) {
+  const page = doc.getPage(i);
+  const c = page.node.Contents();
+  if (!c) return '';
+  const streams = c instanceof PDFLib.PDFArray ? c.asArray().map(r => doc.context.lookup(r)) : [c];
+  return streams.map(s => {
+    const raw = Buffer.from(s.getContents());
+    try { return inflateSync(raw).toString('latin1'); } catch { return raw.toString('latin1'); }
+  }).join('\n');
+}
+const hex = s => Buffer.from(s, 'latin1').toString('hex').toUpperCase();
+const hasText = (doc, i, s) => pageContent(doc, i).toUpperCase().includes(hex(s));
+
+test('checkPdf: a good PDF, a password-protected one and garbage', async () => {
+  assert.equal(await E.checkPdf(fx('two-pages.pdf'), PDFLib), 'ok');
+  assert.equal(await E.checkPdf(fx('locked.pdf'), PDFLib), 'encrypted');
+  assert.equal(await E.checkPdf(new TextEncoder().encode('not a pdf at all'), PDFLib), 'damaged');
+});
+
+test('photoPlacement: portrait and landscape A4, fitted inside 28 pt margins and centred', () => {
+  const p = E.photoPlacement(600, 900);
+  assert.deepEqual(p.page, [595.28, 841.89]);
+  assert.ok(p.width <= 595.28 - 56 + 1e-9 && p.height <= 841.89 - 56 + 1e-9);
+  assert.ok(Math.abs(p.x - (595.28 - p.width) / 2) < 1e-9 && Math.abs(p.y - (841.89 - p.height) / 2) < 1e-9);
+  assert.ok(Math.abs(p.width / p.height - 600 / 900) < 1e-9);
+  const l = E.photoPlacement(900, 600);
+  assert.deepEqual(l.page, [841.89, 595.28]);
+  assert.ok(l.width <= 841.89 - 56 + 1e-9 && l.height <= 595.28 - 56 + 1e-9);
+});
+
+test('buildCompletePdf: ACR pages, then each enclosure in order, label on its first page only', async () => {
+  const parts = [
+    { number: 1, label: 'Certificate / sanction order', files: [
+      { name: 'p.jpg', type: 'image/jpeg', bytes: fx('portrait.jpg') },
+      { name: 'two.pdf', type: 'application/pdf', bytes: fx('two-pages.pdf') }] },
+    { number: 3, label: 'Invited lecture', files: [{ name: 'l.jpg', type: 'image/jpeg', bytes: fx('landscape.jpg') }] },
+  ];
+  const out = await E.buildCompletePdf({ acrPdf: await acrPdf(2), parts, PDFLib });
+  const doc = await PDFLib.PDFDocument.load(out);
+  assert.equal(doc.getPageCount(), 2 + 1 + 2 + 1);
+  const { width, height } = doc.getPage(5).getSize();
+  assert.ok(width > height, 'landscape photo gives a landscape page');
+  const stamped = [0, 1, 2, 3, 4, 5].filter(i => hasText(doc, i, 'Enclosure '));
+  assert.deepEqual(stamped, [2, 5]);
+  assert.ok(hasText(doc, 2, 'Enclosure 1 '));
+  assert.ok(hasText(doc, 2, ' Certificate / sanction order'));
+  assert.ok(hasText(doc, 5, 'Enclosure 3 '));
+});
+
+test('buildCompletePdf with no parts is just the ACR PDF', async () => {
+  const doc = await PDFLib.PDFDocument.load(await E.buildCompletePdf({ acrPdf: await acrPdf(3), parts: [], PDFLib }));
+  assert.equal(doc.getPageCount(), 3);
 });
