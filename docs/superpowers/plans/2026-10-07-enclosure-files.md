@@ -928,17 +928,17 @@ Replace `syncSession` and `syncAll` in the returned object:
     },
     async syncAll() {
       const folderId = await drive.ensureFolder();
-      const files_ = await drive.listFiles(folderId, PREFIX);
+      const drafts = await drive.listFiles(folderId, PREFIX);
       const copies = await listFileCopies(folderId);
       const names = new Set(await sessionsHere());
-      for (const f of files_) { const s = sessionFromName(f.name); if (s !== null) names.add(s); }
+      for (const f of drafts) { const s = sessionFromName(f.name); if (s !== null) names.add(s); }
       const out = [];
-      for (const s of [...names].sort()) out.push({ ...(await syncOne(s, folderId, files_)), ...(await syncFiles(s, folderId, copies)) });
+      for (const s of [...names].sort()) out.push({ ...(await syncOne(s, folderId, drafts)), ...(await syncFiles(s, folderId, copies)) });
       return out;
     },
 ```
 
-(`files_` avoids clashing with the new `files` parameter. Rename every use of the old local `files` in `syncAll`.)
+(`drafts`, the list of draft files, avoids clashing with the new `files` parameter. Rename every use of the old local `files` in `syncAll`.)
 
 - [ ] **Step 4: Run the tests to see them pass**
 

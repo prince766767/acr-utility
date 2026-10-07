@@ -69,6 +69,23 @@ export function otherCopyName(session, when, from = '') {
   return `${PREFIX}${session ? session : '(no session)'} (other copy, ${t}${safe ? ', ' + safe : ''}).acr.json`;
 }
 
+// Enclosure files sit in the same Drive folder, one Drive file per attached file; the record lists them.
+export const FILE_PREFIX = 'ACR enclosure ';
+const sessionLabel = session => (session ? session : '(no session)');
+export const fileDriveName = (session, id, name) => `${FILE_PREFIX}${sessionLabel(session)} - ${id} - ${name}`;
+
+export function fileIdFromName(name, session) {
+  const p = `${FILE_PREFIX}${sessionLabel(session)} - `;
+  if (!String(name).startsWith(p)) return null;
+  const m = /^([0-9a-z]{12}) - /.exec(name.slice(p.length));
+  return m ? m[1] : null;
+}
+
+export const recordFiles = record => (Array.isArray(record?.enclosures) ? record.enclosures : [])
+  .flatMap(e => (e && Array.isArray(e.files) ? e.files : []))
+  .filter(f => f && typeof f === 'object' && /^[0-9a-z]{12}$/.test(String(f.id)))
+  .map(f => ({ id: f.id, name: String(f.name || 'file'), type: String(f.type || 'application/octet-stream') }));
+
 // What to do for one session. localSync = { hash } from the last time this device and Drive agreed.
 export function decide({ local, localSync, remote }) {
   if (!remote) return local && hasData(local) ? 'upload' : 'nothing';
@@ -84,9 +101,10 @@ export function decide({ local, localSync, remote }) {
 
 const strip = json => { const r = { ...json }; delete r.deviceLabel; delete r.contentHash; return r; };
 
-// deps: store (localStorage-like), sessions (sessions.js), drive ({ensureFolder, listFiles, downloadText, upsertFile}),
-// ask(kind, {session, local, remote}) -> 'drive' | 'device', deviceLabel, now.
-export function createDraftSync({ store, sessions, drive, ask, deviceLabel = '', now = () => new Date() }) {
+// deps: store (localStorage-like), sessions (sessions.js), drive ({ensureFolder, listFiles, downloadText, upsertFile,
+// downloadBytes, deleteFile}), files (optional enclosure file store: ids, get, put), ask(kind, {session, local, remote})
+// -> 'drive' | 'device', deviceLabel, now.
+export function createDraftSync({ store, sessions, drive, files = null, ask, deviceLabel = '', now = () => new Date() }) {
   const syncKey = session => SYNC_KEY + (session || '(no session)');
   const getSync = session => { try { return JSON.parse(store.getItem(syncKey(session)) || 'null'); } catch { return null; } };
   const setSync = (session, hash, fileId) => store.setItem(syncKey(session), JSON.stringify({ hash, fileId }));
@@ -120,6 +138,34 @@ export function createDraftSync({ store, sessions, drive, ask, deviceLabel = '',
     return { session, action, choice };
   }
 
+  // After the record has synced: the record is the truth for which files exist.
+  async function syncFiles(session, folderId, listed) {
+    if (!files) return {};
+    const want = recordFiles(sessions.readRecord(store, session));
+    const here = new Set(await files.ids(session));
+    const there = new Map();
+    for (const f of listed) { const id = fileIdFromName(f.name, session); if (id) there.set(id, f); }
+    let failed = 0;
+    for (const f of want) {
+      try {
+        if (here.has(f.id) && !there.has(f.id)) {
+          const rec = await files.get(session, f.id);
+          await drive.upsertFile({ name: fileDriveName(session, f.id, f.name), bytes: rec.bytes, mime: rec.type, folderId });
+        } else if (!here.has(f.id) && there.has(f.id)) {
+          const bytes = await drive.downloadBytes(there.get(f.id).id);
+          await files.put({ session, id: f.id, name: f.name, type: f.type, size: bytes.length, bytes, addedAt: now().toISOString() });
+        }
+      } catch (err) { console.warn('Enclosure file not synced:', err); failed++; }
+    }
+    const keep = new Set(want.map(f => f.id));
+    for (const [id, f] of there) {
+      if (keep.has(id)) continue;
+      try { await drive.deleteFile(f.id); } catch (err) { console.warn('Enclosure file not deleted:', err); failed++; }
+    }
+    return failed ? { filesFailed: failed } : {};
+  }
+  const listFileCopies = folderId => (files ? drive.listFiles(folderId, FILE_PREFIX) : []);
+
   async function sessionsHere() {
     const list = sessions.listSessions(store);
     if (sessions.readRecord(store, '')) list.push('');
@@ -129,15 +175,17 @@ export function createDraftSync({ store, sessions, drive, ask, deviceLabel = '',
   return {
     async syncSession(session) {
       const folderId = await drive.ensureFolder();
-      return syncOne(session, folderId, await drive.listFiles(folderId, PREFIX));
+      const result = await syncOne(session, folderId, await drive.listFiles(folderId, PREFIX));
+      return { ...result, ...(await syncFiles(session, folderId, await listFileCopies(folderId))) };
     },
     async syncAll() {
       const folderId = await drive.ensureFolder();
-      const files = await drive.listFiles(folderId, PREFIX);
+      const drafts = await drive.listFiles(folderId, PREFIX);
+      const copies = await listFileCopies(folderId);
       const names = new Set(await sessionsHere());
-      for (const f of files) { const s = sessionFromName(f.name); if (s !== null) names.add(s); }
+      for (const f of drafts) { const s = sessionFromName(f.name); if (s !== null) names.add(s); }
       const out = [];
-      for (const s of [...names].sort()) out.push(await syncOne(s, folderId, files));
+      for (const s of [...names].sort()) out.push({ ...(await syncOne(s, folderId, drafts)), ...(await syncFiles(s, folderId, copies)) });
       return out;
     },
   };

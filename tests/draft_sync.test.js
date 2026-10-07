@@ -136,3 +136,83 @@ test('sync: an unnamed draft is kept too; other-copy files are ignored when list
   assert.deepEqual(r.map(x => [x.session, x.action]), [['', 'upload']]);
   assert.ok(drive.store.has('ACR draft (no session).acr.json'));
 });
+
+// A Drive for the file steps: names -> {id, bytes}; records uploads, downloads and deletes.
+function fileDrive(initial = {}) {
+  const files = new Map(Object.entries(initial).map(([name, bytes], i) => [name, { id: 'D' + i, name, bytes }]));
+  const log = [];
+  let n = 50;
+  return {
+    log, files,
+    ensureFolder: async () => 'FOLDER',
+    listFiles: async (folderId, prefix) => [...files.values()].filter(f => f.name.startsWith(prefix)).map(({ id, name }) => ({ id, name })),
+    downloadText: async () => { throw new Error('no draft in this test'); },
+    upsertFile: async ({ name, bytes, mime }) => {
+      if (mime === 'application/json') return { id: 'J', name };   // the draft itself
+      log.push(['up', name]);
+      const f = { id: 'D' + n++, name, bytes: new Uint8Array(await new Blob([bytes]).arrayBuffer()) };
+      files.set(name, f);
+      return { id: f.id, name };
+    },
+    downloadBytes: async id => { log.push(['down', id]); return [...files.values()].find(f => f.id === id).bytes; },
+    deleteFile: async id => { log.push(['del', id]); for (const [k, f] of files) if (f.id === id) files.delete(k); },
+  };
+}
+function memFiles(list = []) {
+  const m = new Map(list.map(r => [`${r.session}|${r.id}`, r]));
+  return {
+    m,
+    ids: async session => [...m.values()].filter(r => r.session === session).map(r => r.id),
+    get: async (session, id) => m.get(`${session}|${id}`),
+    put: async r => { m.set(`${r.session}|${r.id}`, r); },
+  };
+}
+const withFiles = (session, list) => rec(session, 'ASHA', { enclosures: [{ label: 'Certificate / sanction order', checked: true, files: list }] });
+const meta = (id, name = id + '.pdf') => ({ id, name, type: 'application/pdf', size: 1, order: 0 });
+
+test('file names in Drive', () => {
+  assert.equal(D.fileDriveName('2025-26', 'aaaaaaaaaaaa', 'x.pdf'), 'ACR enclosure 2025-26 - aaaaaaaaaaaa - x.pdf');
+  assert.equal(D.fileDriveName('', 'aaaaaaaaaaaa', 'x.pdf'), 'ACR enclosure (no session) - aaaaaaaaaaaa - x.pdf');
+  assert.equal(D.fileIdFromName('ACR enclosure 2025-26 - aaaaaaaaaaaa - x - y.pdf', '2025-26'), 'aaaaaaaaaaaa');
+  assert.equal(D.fileIdFromName('ACR enclosure 2024-25 - aaaaaaaaaaaa - x.pdf', '2025-26'), null);
+  assert.equal(D.fileIdFromName('ACR draft 2025-26.acr.json', '2025-26'), null);
+});
+
+test('file steps: upload new, download missing, delete orphans of this session only', async () => {
+  const st = new FakeStore();
+  S.saveRecord(st, withFiles('2025-26', [meta('aaaaaaaaaaaa'), meta('bbbbbbbbbbbb')]));
+  const drive = fileDrive({
+    'ACR enclosure 2025-26 - bbbbbbbbbbbb - bbbbbbbbbbbb.pdf': new Uint8Array([9]),
+    'ACR enclosure 2025-26 - zzzzzzzzzzzz - old.pdf': new Uint8Array([1]),
+    'ACR enclosure 2024-25 - yyyyyyyyyyyy - keep.pdf': new Uint8Array([1]),
+  });
+  const files = memFiles([{ session: '2025-26', id: 'aaaaaaaaaaaa', name: 'aaaaaaaaaaaa.pdf', type: 'application/pdf', size: 1, bytes: new Uint8Array([5]) }]);
+  const sync = D.createDraftSync({ store: st, sessions: S, drive, files, ask: async () => 'device' });
+  const r = await sync.syncSession('2025-26');
+  assert.equal(r.filesFailed, undefined);
+  assert.deepEqual(drive.log, [['up', 'ACR enclosure 2025-26 - aaaaaaaaaaaa - aaaaaaaaaaaa.pdf'], ['down', 'D0'], ['del', 'D1']]);
+  assert.deepEqual([...(await files.get('2025-26', 'bbbbbbbbbbbb')).bytes], [9]);
+  assert.ok(drive.files.has('ACR enclosure 2024-25 - yyyyyyyyyyyy - keep.pdf'));
+});
+
+test('file steps: a failed transfer is counted, the record is left alone, nothing is deleted wrongly', async () => {
+  const st = new FakeStore();
+  S.saveRecord(st, withFiles('2025-26', [meta('bbbbbbbbbbbb')]));
+  const drive = fileDrive({ 'ACR enclosure 2025-26 - bbbbbbbbbbbb - b.pdf': new Uint8Array([9]) });
+  drive.downloadBytes = async () => { throw new Error('offline'); };
+  const sync = D.createDraftSync({ store: st, sessions: S, drive, files: memFiles(), ask: async () => 'device' });
+  const before = JSON.stringify(S.readRecord(st, '2025-26').enclosures);
+  const r = await sync.syncSession('2025-26');
+  assert.equal(r.filesFailed, 1);
+  assert.equal(JSON.stringify(S.readRecord(st, '2025-26').enclosures), before);
+  assert.ok(drive.files.has('ACR enclosure 2025-26 - bbbbbbbbbbbb - b.pdf'));
+});
+
+test('without a file store the draft sync works as before', async () => {
+  const st = new FakeStore();
+  S.saveRecord(st, withFiles('2025-26', [meta('aaaaaaaaaaaa')]));
+  const drive = fileDrive();
+  const r = await D.createDraftSync({ store: st, sessions: S, drive, ask: async () => 'device' }).syncSession('2025-26');
+  assert.equal(r.action, 'upload');
+  assert.deepEqual(drive.log, []);
+});
