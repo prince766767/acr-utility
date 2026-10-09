@@ -491,14 +491,13 @@ def generate(data,out_docx):
     indent_point12(doc)
     selected=[x.get('label') for x in data.get('enclosures',[]) if isinstance(x,dict) and x.get('checked',True)]
     if selected:
-        insert_at=None
-        for p in doc.paragraphs:
-            if p.text.strip().startswith('I certify that the information provided'):
-                insert_at=p
-                break
-        if insert_at is not None:
+        # Under the heading, so the list stays on its page (the teacher's certificate starts the next one).
+        heading=next((p for p in doc.paragraphs if p.text.strip().startswith('LIST OF ENCLOSURES')),None)
+        if heading is not None:
+            at=heading._p
             for idx,label in enumerate(selected,1):
-                np=insert_at.insert_paragraph_before(f'☑ {idx}. {label}')
+                np=heading.insert_paragraph_before(f'☑ {idx}. {label}')
+                at.addnext(np._p); at=np._p
                 for r in np.runs: r.font.color.rgb=BLUE
     apply_inline_marks(doc)
     apply_text_style(doc,data.get('style'))

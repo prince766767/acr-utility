@@ -111,3 +111,20 @@ test('buildCompletePdf with no parts is just the ACR PDF', async () => {
   const doc = await PDFLib.PDFDocument.load(await E.buildCompletePdf({ acrPdf: await acrPdf(3), parts: [], PDFLib }));
   assert.equal(doc.getPageCount(), 3);
 });
+
+test('isBlankPage: an empty page and a page with one space are blank; drawings and text are not', async () => {
+  const doc = await PDFLib.PDFDocument.load(fx('with-blank-pages.pdf'));
+  assert.deepEqual(doc.getPageIndices().map(i => E.isBlankPage(doc, i, PDFLib)), [false, true, true, false]);
+});
+
+test('buildCompletePdf leaves out blank pages of an enclosure PDF, but never all of them', async () => {
+  const parts = [
+    { number: 1, label: 'With blanks', files: [{ name: 'w.pdf', type: 'application/pdf', bytes: fx('with-blank-pages.pdf') }] },
+    { number: 2, label: 'All blank', files: [{ name: 'b.pdf', type: 'application/pdf', bytes: fx('all-blank.pdf') }] },
+  ];
+  const doc = await PDFLib.PDFDocument.load(await E.buildCompletePdf({ acrPdf: await acrPdf(1), parts, PDFLib }));
+  assert.equal(doc.getPageCount(), 1 + 2 + 1);
+  assert.ok(hasText(doc, 1, 'Enclosure 1 '));
+  assert.ok(pageContent(doc, 2).includes('Page three'));
+  assert.ok(hasText(doc, 3, 'Enclosure 2 '));
+});

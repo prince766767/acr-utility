@@ -84,6 +84,59 @@ function stamp(page, text, font, rgb) {
   page.drawText(text, { x, y, size, font, color: rgb(0, 0, 0) });
 }
 
+// Does a page show nothing? (Word's "Save as PDF" often ends with a page holding one space.) Careful: anything that
+// may draw - a picture, a form, a shading, a path that is painted, a non-blank string, an annotation - counts as shown.
+const PAINT = /(?:^|\s)(?:Do|BI|sh|S|s|f|F|f\*|B|B\*|b|b\*)(?=\s|$)/;
+const BLANK_BYTES = new Set([0x00, 0x09, 0x0a, 0x0d, 0x20]);
+
+function contentText(doc, page, PDFLib) {
+  const c = page.node.Contents();
+  if (!c) return '';
+  const streams = c instanceof PDFLib.PDFArray ? c.asArray().map(r => doc.context.lookup(r)) : [c];
+  return streams.map(st => {
+    const bytes = st instanceof PDFLib.PDFRawStream ? PDFLib.decodePDFRawStream(st).decode() : st.getContents();
+    let out = '';
+    for (const b of bytes) out += String.fromCharCode(b);
+    return out;
+  }).join('\n');
+}
+
+// Splits content into code and strings: "(...)" literals (nested, escaped) and "<...>" hex strings (not "<<").
+function splitStrings(text) {
+  let code = '', blank = true;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(') {
+      let depth = 1, j = i + 1, inner = '';
+      for (; j < text.length && depth; j++) {
+        if (text[j] === '\\') { inner += text[j + 1] || ''; j++; continue; }
+        if (text[j] === '(') depth++;
+        else if (text[j] === ')' && !--depth) break;
+        inner += text[j];
+      }
+      if (inner.trim()) blank = false;
+      code += ' ';
+      i = j;
+    } else if (ch === '<' && text[i + 1] !== '<' && text[i - 1] !== '<') {
+      const j = text.indexOf('>', i);
+      const hex = text.slice(i + 1, j < 0 ? text.length : j).replace(/\s/g, '');
+      for (let k = 0; k < hex.length; k += 2) if (!BLANK_BYTES.has(parseInt(hex.slice(k, k + 2).padEnd(2, '0'), 16))) blank = false;
+      code += ' ';
+      i = j < 0 ? text.length : j;
+    } else code += ch;
+  }
+  return { code, blank };
+}
+
+export function isBlankPage(doc, index, PDFLib) {
+  const page = doc.getPage(index);
+  if (page.node.Annots()) return false;
+  let text;
+  try { text = contentText(doc, page, PDFLib); } catch { return false; }
+  const { code, blank } = splitStrings(text);
+  return blank && !PAINT.test(code);
+}
+
 export async function buildCompletePdf({ acrPdf, parts, PDFLib }) {
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const out = await PDFDocument.create();
@@ -95,7 +148,8 @@ export async function buildCompletePdf({ acrPdf, parts, PDFLib }) {
     for (const f of part.files) {
       if (f.type === 'application/pdf') {
         const src = await PDFDocument.load(f.bytes);
-        for (const p of await out.copyPages(src, src.getPageIndices())) { out.addPage(p); first ??= p; }
+        const shown = src.getPageIndices().filter(i => !isBlankPage(src, i, PDFLib));
+        for (const p of await out.copyPages(src, shown.length ? shown : src.getPageIndices())) { out.addPage(p); first ??= p; }
       } else {
         const img = await out.embedJpg(f.bytes);
         const at = photoPlacement(img.width, img.height);

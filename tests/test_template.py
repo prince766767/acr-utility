@@ -456,15 +456,16 @@ class TemplatePage1Fits(unittest.TestCase):
                              and p.find(qn('w:pPr') + '/' + qn('w:spacing')).get(qn('w:line')) == '20')
         k13 = next(k for k, e in enumerate(body) if t(e).startswith('a) Roll no (with session)'))
         self.assertEqual([t(body[k]) for k in range(k13 - 3, k13)], ['', '', ''])
+        # The first of the three is half-height since tools/fix_template_pdf_layout.py.
         self.assertEqual([minimal(body[k]) for k in range(k13 - 3, k13)], [False, True, True])
+        sp = body[k13 - 3].find(qn('w:pPr') + '/' + qn('w:spacing'))
+        self.assertEqual((sp.get(qn('w:line')), sp.get(qn('w:lineRule'))), ('134', 'exact'))
         k14 = next(k for k, e in enumerate(body) if t(e).startswith('Any other major assignment in addition to Tea'))
         self.assertEqual(t(body[k14 - 1]), '')
         self.assertTrue(minimal(body[k14 - 1]))
         part2 = next(e for e in body if t(e).startswith('PART-II: SECTION-I'))
         self.assertIsNotNone(part2.find(qn('w:pPr') + '/' + qn('w:pageBreakBefore')))
 
-if __name__ == '__main__':
-    unittest.main()
 
 
 class TemplateLongAnswersJustified(unittest.TestCase):
@@ -491,3 +492,62 @@ class TemplatePoint12Column(unittest.TestCase):
         i = next(k for k, ch in enumerate([c for r in p.findall(qn('w:r')) for c in r if c.tag in (qn('w:tab'), qn('w:t'))]) if ch.tag == qn('w:t') and '{{COLLEGES_SERVED}}' in (ch.text or ''))
         self.assertEqual(seq[i - 1], 'tab')
         self.assertEqual(seq[i - 2], 't')
+
+
+class TemplatePdfLayout(unittest.TestCase):
+    """Layout faults seen in a Google-made PDF; see tools/fix_template_pdf_layout.py."""
+    def setUp(self):
+        from docx.oxml.ns import qn
+        self.qn = qn
+        self.body = list(Document(ROOT / 'ACR_EMPLOYEE_MASTER.docx').element.body)
+        self.t = lambda e: ' '.join(''.join(x.text or '' for x in e.iter(qn('w:t'))).split())
+
+    def spacing(self, p):
+        sp = p.find(self.qn('w:pPr') + '/' + self.qn('w:spacing'))
+        return None if sp is None else (sp.get(self.qn('w:line')), sp.get(self.qn('w:lineRule')))
+
+    def test_page1_gaps_half_height_and_line_spacing_kept(self):
+        sys.path.insert(0, str(ROOT / 'tools'))
+        from fix_template_pdf_layout import page1_gaps
+        gaps = page1_gaps(self.body)
+        self.assertEqual(len(gaps), 6)
+        for p in gaps:
+            self.assertEqual(self.spacing(p), ('134', 'exact'))
+        full = next(e for e in self.body if self.t(e).startswith('Full Name (in Capital letter)'))
+        self.assertEqual(self.spacing(full), ('276', 'auto'))
+
+    def test_point16_labels_and_values_share_tab_stops(self):
+        qn = self.qn
+        k = next(k for k, e in enumerate(self.body) if self.t(e).startswith('Land line telephone No.'))
+        for p in self.body[k:k + 2]:
+            stops = [x.get(qn('w:pos')) for x in p.find(qn('w:pPr') + '/' + qn('w:tabs'))]
+            self.assertEqual(stops, ['4900', '6480'])
+        seq = lambda p: [c.tag.split('}')[1] for r in p.findall(qn('w:r')) for c in r if c.tag in (qn('w:t'), qn('w:tab'))
+                         and not (c.tag == qn('w:t') and not c.text)]
+        self.assertEqual(seq(self.body[k + 1]), ['tab', 't', 'tab', 't'])
+        self.assertEqual(self.spacing(self.body[k + 2]), ('20', 'exact'))
+
+    def test_19c_starts_a_page_without_empty_lines_before_it(self):
+        qn = self.qn
+        k = next(k for k, e in enumerate(self.body) if self.t(e).startswith('How many assignments and class tests'))
+        self.assertIn('{{P19B}}', self.t(self.body[k - 1]))
+        self.assertIsNotNone(self.body[k].find(qn('w:pPr') + '/' + qn('w:pageBreakBefore')))
+
+    def test_point20_heading_kept_with_table(self):
+        qn = self.qn
+        k = next(k for k, e in enumerate(self.body) if self.t(e) == 'Details of Last year Annual Examination Results')
+        for p in self.body[k:k + 2]:
+            self.assertIsNotNone(p.find(qn('w:pPr') + '/' + qn('w:keepNext')))
+        rows = self.body[k + 2].findall(qn('w:tr'))
+        keep = lambda tr: all(p.find(qn('w:pPr') + '/' + qn('w:keepNext')) is not None for p in tr.iter(qn('w:p')))
+        self.assertTrue(all(keep(tr) for tr in rows[:-1]))
+
+    def test_certificate_follows_enclosure_heading_on_a_new_page(self):
+        qn = self.qn
+        k = next(k for k, e in enumerate(self.body) if self.t(e).startswith('LIST OF ENCLOSURES'))
+        self.assertTrue(self.t(self.body[k + 1]).startswith('I certify that the information provided'))
+        self.assertIsNotNone(self.body[k + 1].find(qn('w:pPr') + '/' + qn('w:pageBreakBefore')))
+
+
+if __name__ == '__main__':
+    unittest.main()

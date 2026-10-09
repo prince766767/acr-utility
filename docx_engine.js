@@ -525,11 +525,13 @@ function insertEnclosures(doc, data) {
     .filter(x => x && typeof x === 'object' && !Array.isArray(x) && (has(x, 'checked') ? x.checked : true))
     .map(x => (x.label === undefined || x.label === null ? 'None' : String(x.label)));
   if (!selected.length) return;
-  const at = kids(doc.body, 'p').find(p => paraText(p).trim().startsWith('I certify that the information provided'));
-  if (!at) return;
+  // Under the heading, so the list stays on its page (the teacher's certificate starts the next one).
+  const heading = kids(doc.body, 'p').find(p => paraText(p).trim().startsWith('LIST OF ENCLOSURES'));
+  if (!heading) return;
+  const at = heading.nextSibling;
   selected.forEach((label, i) => {
     const p = wEl(doc.xml, 'p');
-    at.parentNode.insertBefore(p, at);
+    heading.parentNode.insertBefore(p, at);
     const r = p.appendChild(wEl(doc.xml, 'r'));
     setRunText(r, `☑ ${i + 1}. ${label}`);
     setColor(r, BLUE);

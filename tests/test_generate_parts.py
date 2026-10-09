@@ -122,6 +122,7 @@ class GenerateParts(unittest.TestCase):
         self.assertNotIn('{{', full)
         i = self.paras.index('☑ 1. Certificate / sanction order')
         self.assertTrue(self.paras[i + 1].startswith('I certify that the information provided'))
+        self.assertTrue(self.paras[i - 1].startswith('LIST OF ENCLOSURES'))
         self.assertNotIn('Degree / qualification certificate', full)
 
     def strikes(self, doc, start, options):
