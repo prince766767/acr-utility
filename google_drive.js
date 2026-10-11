@@ -69,7 +69,17 @@ export function createTokenSource({ clientId, gis, now = () => Date.now(), signI
   }
   // The token if it is still valid, else null; never opens Google's sign-in (for saves nobody tapped).
   const current = () => (token && now() < expiresAt - 60000 ? token : null);
-  return { getToken, current, preload: () => ready().catch(err => console.warn(err)) };
+  // Drops the token (a sign-in whose account did not accept the privacy policy).
+  const forget = () => { token = null; expiresAt = 0; };
+  return { getToken, current, forget, preload: () => ready().catch(err => console.warn(err)) };
+}
+
+// The email address of the signed-in Google account (allowed with drive.file); used only to record
+// that this account accepted the privacy policy (privacy_consent.js).
+export async function accountEmail({ fetch, token }) {
+  const resp = await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { Authorization: `Bearer ${token}` } });
+  if (!resp.ok) throw new DriveError(resp.status, 'The Google account email could not be read.');
+  return String((await resp.json())?.user?.emailAddress || '');
 }
 
 const escapeQ = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");

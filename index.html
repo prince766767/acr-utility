@@ -328,6 +328,25 @@
           </div>
           <p class="muted">On a PC the Word file can also be made with <code>python generate_acr.py &lt;exported file&gt; -o ACR.docx</code>; both give the same file.</p>
         </div>
+        <div id="feedbackCard" class="card hidden">
+          <h2>Rate this utility</h2>
+          <p class="muted">Your rating and suggestions help to improve the utility. Nothing from your ACR is sent.</p>
+          <div class="rating-row">
+            <div id="ratingStars" class="stars" role="radiogroup" aria-label="Rating out of 5">
+              <button type="button" class="star" role="radio" aria-checked="false" data-star="1" aria-label="1 star, Poor">★</button>
+              <button type="button" class="star" role="radio" aria-checked="false" data-star="2" aria-label="2 stars, Fair">★</button>
+              <button type="button" class="star" role="radio" aria-checked="false" data-star="3" aria-label="3 stars, Good">★</button>
+              <button type="button" class="star" role="radio" aria-checked="false" data-star="4" aria-label="4 stars, Very good">★</button>
+              <button type="button" class="star" role="radio" aria-checked="false" data-star="5" aria-label="5 stars, Excellent">★</button>
+            </div>
+            <span id="ratingWord" class="muted">Tap a star</span>
+          </div>
+          <label>Feedback or suggestions<textarea id="feedbackText" rows="4" placeholder="What worked well? What should be improved?"></textarea></label>
+          <div class="docx-actions">
+            <button type="button" id="feedbackSend">Send feedback by email</button>
+          </div>
+          <p id="feedbackStatus" class="muted" role="status">Your email app opens with the rating and feedback ready; press Send there.</p>
+        </div>
       </section>
     </form>
   </main>
@@ -426,6 +445,23 @@
         <button type="button" id="syncUseDevice" class="secondary">Keep this device's copy</button>
       </div>
       <p class="muted">The copy you don't choose is not deleted: it is kept in your Drive folder as an "other copy" file.</p>
+    </div>
+  </div>
+  <div id="privacyDialog" class="sync-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="privacyTitle">
+    <div class="sync-box">
+      <h3 id="privacyTitle">Please accept the Privacy Policy</h3>
+      <p><span id="privacyWho">Before you use ACR Utility on this device, please read and accept the</span> <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. In short:</p>
+      <ul class="privacy-points">
+        <li>What you type stays in your own browser on this device. If you use the Google features, your Word file, PDF and draft are saved only in <strong>your own</strong> Google Drive.</li>
+        <li>The app can see only the Drive files it makes itself. It reads your Google email address only to record that the account accepted this policy.</li>
+        <li>Nothing is sent to the developer, unless you yourself email a rating or feedback; there are no advertisements and no tracking.</li>
+        <li><strong>You are responsible for your own data.</strong> Keep a backup (Export Draft). The developer is not responsible for any loss of data, however it happens.</li>
+      </ul>
+      <div class="toolbar-buttons">
+        <button type="button" id="privacyAccept">I accept</button>
+        <button type="button" id="privacyDecline" class="secondary hidden">Not now</button>
+      </div>
+      <p id="privacyNote" class="muted">You are asked only once on this device.</p>
     </div>
   </div>
   <div id="v04Panel" class="style-panel hidden" role="dialog" aria-labelledby="v04Title">

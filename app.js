@@ -6,12 +6,14 @@ import { tally, normalizeApi, emptyApi, lastYearProblems, lastYearCells, cleanSc
 import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
 import { parseDob, dobWords, fieldProblems, migrateDraft, ENCLOSURE_DEFAULTS } from './acr_fields.js';
 import { tabStatus, TAB_WORDS, progressBand, progressPercent } from './tab_status.js';
+import { createConsent } from './privacy_consent.js';
+import { FEEDBACK_EMAIL, RATING_WORDS, canSend, feedbackMail } from './feedback.js';
 import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
 import { generateDocx, ProblemsError, normalizeStyle, STYLE_FONTS, DEFAULT_STYLE } from './docx_engine.js';
 import { acrFileName } from './file_names.js';
 import googleConfig from './google-config.js';
-import { loadGis, createTokenSource, createDrive, FOLDER_NAME } from './google_drive.js';
+import { loadGis, createTokenSource, createDrive, accountEmail, FOLDER_NAME } from './google_drive.js';
 import { shareFiles, downloadFile } from './share.js';
 import { createDraftSync } from './draft_sync.js';
 import { isV04, v04Docs, findV04Docs, convertV04 } from './import_v04.js';
@@ -46,7 +48,20 @@ const showPlace=initPlaceUi(form);
 const SHOW_FIREBASE_SIGNIN=false; // header Google/Firebase sign-in is kept for the later cloud-sessions work
 const DOCX_MIME='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const googleReady=Boolean(googleConfig?.clientId)&&!googleConfig.clientId.startsWith('YOUR_');
-const googleTokens=googleReady?createTokenSource({clientId:googleConfig.clientId,gis:loadGis}):null;
+// Accepting the privacy policy (privacy_consent.js): once on this device before the form can be used,
+// and once for every Google account straight after it signs in.
+function askPrivacy({email}){
+  const device=!email, blocked=[document.querySelector('.topbar'),document.querySelector('main')];
+  $('privacyTitle').textContent=device?'Please accept the Privacy Policy':'Privacy Policy for this Google account';
+  $('privacyWho').textContent=device?'Before you use ACR Utility on this device, please read and accept the':`You are signed in as ${email}. This Google account must also accept the`;
+  $('privacyDecline').classList.toggle('hidden',device);
+  $('privacyNote').textContent=device?'You are asked only once on this device.':'Each Google account is asked only once on this device. With "Not now" the app still works; only the Google features stay off.';
+  if(device) blocked.forEach(el=>{el.inert=true;});   // the form cannot be used until it is accepted
+  $('privacyDialog').classList.remove('hidden'); $('privacyAccept').focus();
+  return new Promise(resolve=>{const done=ok=>{$('privacyDialog').classList.add('hidden'); blocked.forEach(el=>{el.inert=false;}); $('privacyAccept').onclick=null; $('privacyDecline').onclick=null; resolve(ok);}; $('privacyAccept').onclick=()=>done(true); $('privacyDecline').onclick=()=>done(false);});
+}
+const privacyConsent=createConsent({store,ask:askPrivacy});
+const googleTokens=googleReady?privacyConsent.guard(createTokenSource({clientId:googleConfig.clientId,gis:loadGis}),token=>accountEmail({fetch:(...a)=>fetch(...a),token})):null;
 const drive=googleReady?createDrive({fetch:(...a)=>fetch(...a),getToken:o=>googleTokens.getToken(o)}):null;
 // Enclosure files (spec docs/superpowers/specs/2026-10-07-enclosure-files-design.md).
 const fileStore=createFileStore();
@@ -563,6 +578,22 @@ if('serviceWorker' in navigator){
 initApiUi({getApi:()=>state.api,onChange:()=>{updateScores();saveLocal();}});
 initLastYearUi({getLy:()=>state.api.lastAcademicYear||{},setLy:v=>{state.api.lastAcademicYear=v;},onChange:()=>{resolveLastYear();updateScores();saveLocal();},onImport:importLastYearFile});
 renderApiLists();loadLocal();renderRepeatables();renderEnclosures();updateScores();updateProgress();renderReview();
+privacyConsent.ensureDevice();
 // The tab strip and the side panels sit just under the top bar. Its height changes with the screen width
 // (the buttons wrap on a phone), so it is measured instead of fixed in styles.css.
 {const bar=document.querySelector('.topbar');const setBarHeight=()=>document.documentElement.style.setProperty('--topbar-h',bar.offsetHeight+'px');setBarHeight();if('ResizeObserver' in window) new ResizeObserver(setBarHeight).observe(bar); else window.addEventListener('resize',setBarHeight);}
+// Rating and feedback (Review tab): opens the teacher's own email app; nothing is sent by the app itself (feedback.js).
+if(FEEDBACK_EMAIL){
+  let rating=0; const starButtons=[...document.querySelectorAll('#ratingStars .star')];
+  const showRating=()=>{starButtons.forEach(b=>{const n=Number(b.dataset.star); b.classList.toggle('on',n<=rating); b.setAttribute('aria-checked',String(n===rating));}); $('ratingWord').textContent=rating?`${rating} out of 5 – ${RATING_WORDS[rating]}`:'Tap a star';};
+  const readyText=$('feedbackStatus').textContent; const resetStatus=()=>{$('feedbackStatus').textContent=readyText;};
+  starButtons.forEach(b=>b.addEventListener('click',()=>{const n=Number(b.dataset.star); rating=n===rating?0:n; showRating(); resetStatus();}));   // tapping the same star again clears it
+  $('feedbackText').addEventListener('input',resetStatus);
+  $('feedbackSend').addEventListener('click',()=>{
+    const text=$('feedbackText').value;
+    if(!canSend(rating,text)){$('feedbackStatus').textContent='Please tap a star or type your feedback first.'; return;}
+    location.href=feedbackMail({to:FEEDBACK_EMAIL,rating,text});
+    $('feedbackStatus').textContent=`Your email app should open now – press Send there. If nothing opens, please email ${FEEDBACK_EMAIL}.`;
+  });
+  $('feedbackCard').classList.remove('hidden');
+}
