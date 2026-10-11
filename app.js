@@ -5,6 +5,7 @@ import firebaseConfig from './firebase-config.js';
 import { tally, normalizeApi, emptyApi, lastYearProblems, lastYearCells, cleanScore, cleanCount } from './api_tally.js';
 import { initApiUi, renderApiLists, renderApiValues } from './api_ui.js';
 import { parseDob, dobWords, fieldProblems, migrateDraft, ENCLOSURE_DEFAULTS } from './acr_fields.js';
+import { tabStatus, TAB_WORDS, progressBand, progressPercent } from './tab_status.js';
 import * as sessions from './sessions.js';
 import { initLastYearUi, renderLastYear } from './last_year_ui.js';
 import { generateDocx, ProblemsError, normalizeStyle, STYLE_FONTS, DEFAULT_STYLE } from './docx_engine.js';
@@ -544,7 +545,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 if(googleReady){for(const id of ['shareBtn','driveBtn','googleRouteHelp','draftDriveBtn'])$(id).classList.remove('hidden'); googleTokens.preload(); setDriveState(driveOn()?'reconnect':'off');}
 refreshFiles();
 
-function updateProgress(){const d=collectSimple();let done=0,total=0;const must=[['fullName','Profile'],['employeeCode','Profile'],['subject','Profile'],['designation','Profile'],['p17','17'],['p18','18'],['p19b','19b'],['p21i','21i'],['p25','25']];must.forEach(([k])=>{total++; const v=d.profile[k]??d.part2[k]; if(String(v||'').trim())done++;}); total+=4; if(d.teaching.length)done++; if(d.assignments.length)done++; if(d.results.length)done++; if(d.enclosures.some(x=>x.checked))done++; const pct=Math.round(done/total*100);$('progressBar').style.width=`${pct}%`;$('progressText').textContent=`${pct}%`;}
+function updateProgress(){const d=collectSimple();const scores=tally(d.api);const pct=progressPercent(d,scores);$('progressBar').style.width=`${pct}%`;$('progressBar').dataset.band=progressBand(pct);$('progressText').textContent=`${pct}%`;updateTabColours(d,scores);}
+// Tab colours: light red = not filled yet, orange = partly filled, green = filled (tab_status.js); the open tab stays dark blue.
+function updateTabColours(d,scores){const status=tabStatus(d,scores,docxProblems(d).length);document.querySelectorAll('.tabs button').forEach(b=>{const s=status[b.dataset.section];if(!s)return;b.dataset.status=s;b.title=TAB_WORDS[s];});}
 function renderReview(){renderCompleteControls();const d=collectSimple();renderFieldProblems(d);const items=[['Session',d.session||'Not set'],['Employee',d.profile.fullName||'Not set'],['Employee Code',d.profile.employeeCode||'Not set'],['Teaching rows',d.teaching.length],['Exam result rows',d.results.length],['Selected enclosures',d.enclosures.filter(x=>x.checked).length],...apiReviewItems(d.api)];const box=$('reviewList');box.innerHTML='';items.forEach(([a,b])=>{const x=document.createElement('div');x.className='review-item';x.innerHTML=`<span>${escapeHtml(String(a))}</span><strong>${escapeHtml(String(b))}</strong>`;box.appendChild(x);});}
 function escapeHtml(s){return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');}
 

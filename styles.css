@@ -49,3 +49,10 @@ small.over{color:var(--danger);font-weight:600}
 @media(min-width:851px){.repeat-row.teaching-row{grid-template-columns:.6fr 2fr 2fr 1.2fr 1.2fr 1.2fr auto}.repeat-row.activity-row{grid-template-columns:1fr 2fr auto}.repeat-row.course-row{grid-template-columns:2.2fr 1.3fr 1fr 1.5fr auto}.repeat-row.research-row{grid-template-columns:2fr 1.6fr 1.6fr 1fr auto}.repeat-row.single-row{grid-template-columns:1fr auto}.result-row>:nth-child(7){grid-column:1}.result-row>:nth-child(11){grid-column:span 2}}
 @media(max-width:850px){.repeat-row.activity-row,.repeat-row.single-row{grid-template-columns:1fr}.result-row>:nth-child(11){grid-column:1/-1}.repeat-row .remove-row{justify-self:start}}
 @media(max-width:520px){.topbar{padding:10px 14px}.top-actions{flex-wrap:wrap;gap:6px}.top-actions .earlier-link{flex:1 1 100%}.top-actions button{flex:1 1 auto;white-space:nowrap;padding:8px 10px;font-size:.85rem}}
+/* Tab and progress colours (tab_status.js). The open tab keeps its dark blue. */
+.tabs button[data-status="empty"]{background:#fde3e3;border-color:#efb4b4;color:#7a1f1f}.tabs button[data-status="empty"]:hover{background:#f9d0d0}
+.tabs button[data-status="part"]{background:#ffe9c9;border-color:#efc37c;color:#6b4200}.tabs button[data-status="part"]:hover{background:#ffdda8}
+.tabs button[data-status="done"]{background:#d8f1de;border-color:#9fd6ad;color:#17512a}.tabs button[data-status="done"]:hover{background:#c3e8cc}
+.tabs button.active,.tabs button.active:hover{background:#143a7b;color:#fff;border-color:#143a7b}
+.progress>div{transition:width .2s,background-color .2s}.progress>div[data-band="red"]{background:#c62828}.progress>div[data-band="orange"]{background:#e68a00}.progress>div[data-band="blue"]{background:var(--blue)}.progress>div[data-band="green"]{background:#1e8e3e}
+.credit{max-width:1200px;margin:6px auto 22px;padding:0 14px;text-align:center;color:var(--muted);font-size:.85rem}
