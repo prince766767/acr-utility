@@ -560,3 +560,6 @@ if('serviceWorker' in navigator){
 initApiUi({getApi:()=>state.api,onChange:()=>{updateScores();saveLocal();}});
 initLastYearUi({getLy:()=>state.api.lastAcademicYear||{},setLy:v=>{state.api.lastAcademicYear=v;},onChange:()=>{resolveLastYear();updateScores();saveLocal();},onImport:importLastYearFile});
 renderApiLists();loadLocal();renderRepeatables();renderEnclosures();updateScores();updateProgress();renderReview();
+// The tab strip and the side panels sit just under the top bar. Its height changes with the screen width
+// (the buttons wrap on a phone), so it is measured instead of fixed in styles.css.
+{const bar=document.querySelector('.topbar');const setBarHeight=()=>document.documentElement.style.setProperty('--topbar-h',bar.offsetHeight+'px');setBarHeight();if('ResizeObserver' in window) new ResizeObserver(setBarHeight).observe(bar); else window.addEventListener('resize',setBarHeight);}

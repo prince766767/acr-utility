@@ -333,7 +333,7 @@
   </main>
 
   <template id="teachingTemplate">
-    <div class="repeat-row">
+    <div class="repeat-row teaching-row">
       <div><label>Sr. No.<input data-key="srNo" type="number" min="1"></label></div>
       <div><label>Class / course<input data-key="classCourse"></label></div>
       <div><label>College<input data-key="college"></label></div>
@@ -355,7 +355,7 @@
   </template>
 
   <template id="activityTemplate">
-    <div class="repeat-row">
+    <div class="repeat-row activity-row">
       <div><label>Title of the activity<input data-key="title"></label></div>
       <div><label>Brief detail of activity<textarea data-key="detail" data-marks rows="2"></textarea></label></div>
       <button type="button" class="danger remove-row">Remove</button>
@@ -363,7 +363,7 @@
   </template>
 
   <template id="orientationTemplate">
-    <div class="repeat-row">
+    <div class="repeat-row course-row">
       <div><label>Summer school / refresher / orientation course, with sponsoring agency<input data-key="course"></label></div>
       <div><label>Place of school / ASC<input data-key="place"></label></div>
       <div><label>Duration<input data-key="duration"></label></div>
@@ -373,7 +373,7 @@
   </template>
 
   <template id="researchTemplate">
-    <div class="repeat-row">
+    <div class="repeat-row research-row">
       <div><label>Topic / title of research project<input data-key="title"></label></div>
       <div><label>University / institution registered with<input data-key="institution"></label></div>
       <div><label>Nature (Minor / Major / Doctoral / Post-doctoral)<input data-key="nature"></label></div>
@@ -383,14 +383,14 @@
   </template>
 
   <template id="otherInfoTemplate">
-    <div class="repeat-row">
+    <div class="repeat-row single-row">
       <div><label>Credential / contribution / award<textarea data-key="text" data-marks rows="2"></textarea></label></div>
       <button type="button" class="danger remove-row">Remove</button>
     </div>
   </template>
 
   <template id="resultTemplate">
-    <div class="repeat-row">
+    <div class="repeat-row result-row">
       <div><label>Class<input data-key="className"></label></div>
       <div><label>Duration taught<input data-key="duration"></label></div>
       <div><label>Appeared<input data-key="appeared" type="number" min="0"></label></div>
